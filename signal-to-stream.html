@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal to Stream: Russia's Digital Leap</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#00D4FF; --red:#FF2D55; --green:#00FF88;
+  --black:#060810; --navy:#0A0E1A; --panel:#0D1220;
+  --glass:rgba(255,255,255,0.04); --gborder:rgba(255,255,255,0.08);
+  --t1:#F0F4FF; --t2:#8892AA; --t3:#4A5270;
+  --gblue:0 0 20px rgba(0,212,255,0.4),0 0 60px rgba(0,212,255,0.15);
+  --gred:0 0 20px rgba(255,45,85,0.4),0 0 60px rgba(255,45,85,0.15);
+  --grain:0.12; --scan:0.55; --gridop:0.3;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--t1);font-family:'Inter',sans-serif;overflow-x:hidden;cursor:default;}
+
+/* ── GRAIN + SCANLINES ── */
+#grain-overlay{position:fixed;inset:0;pointer-events:none;z-index:9997;transition:opacity 1.5s ease;}
+#grain-overlay::before{content:'';position:absolute;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:.12;mix-blend-mode:overlay;}
+#grain-overlay::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+  opacity:.55;}
+
+/* ── SCROLL PROGRESS ── */
+#sprog{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--red),var(--blue));z-index:10000;transition:width .08s linear;width:0%;}
+
+/* ── LANG TOGGLE ── */
+#lang-btn{position:fixed;top:18px;right:20px;z-index:10001;background:rgba(10,14,26,0.85);backdrop-filter:blur(12px);border:1px solid var(--gborder);padding:6px 14px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--t2);cursor:pointer;transition:all .2s;border-radius:2px;}
+#lang-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:14px 40px;display:flex;justify-content:space-between;align-items:center;background:rgba(6,8,16,0.75);backdrop-filter:blur(24px);border-bottom:1px solid var(--gborder);transition:padding .3s;}
+nav.scrolled{padding:10px 40px;}
+.nav-logo{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;letter-spacing:.18em;color:var(--blue);text-transform:uppercase;text-decoration:none;}
+.nav-logo span{color:var(--red);}
+.nav-links{display:flex;gap:28px;}
+.nav-links a{font-family:'Space Mono',monospace;font-size:10px;color:var(--t3);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s;white-space:nowrap;}
+.nav-links a:hover{color:var(--blue);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;}
+.hamburger span{display:block;width:22px;height:1.5px;background:var(--t2);transition:all .3s;}
+#mobile-menu{display:none;position:fixed;inset:0;background:rgba(6,8,16,0.97);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:32px;}
+#mobile-menu.open{display:flex;}
+#mobile-menu a{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;color:var(--t2);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s;}
+#mobile-menu a:hover{color:var(--blue);}
+#mobile-menu .close-btn{position:absolute;top:24px;right:24px;font-size:28px;color:var(--t2);cursor:pointer;background:none;border:none;}
+
+/* ── HERO ── */
+#hero{min-height:100vh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;z-index:0;}
+/* Hero background: layered composited image using Unsplash */
+.hero-bg-img{position:absolute;inset:0;background-size:cover;background-position:center;
+  background-image:url('https://images.unsplash.com/photo-1593784991095-a205069470b6?w=1600&q=80&auto=format&fit=crop');
+  opacity:.22;transition:opacity 2s ease;}
+.hero-bg-overlay{position:absolute;inset:0;
+  background:radial-gradient(ellipse at 25% 60%,rgba(0,212,255,0.12) 0%,transparent 55%),
+             radial-gradient(ellipse at 75% 30%,rgba(255,45,85,0.10) 0%,transparent 55%),
+             linear-gradient(to bottom,rgba(6,8,16,0.35) 0%,rgba(6,8,16,0.6) 60%,rgba(6,8,16,0.95) 100%);}
+.hero-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);
+  background-size:64px 64px;animation:gridFade 4s ease forwards;}
+@keyframes gridFade{from{opacity:0;}to{opacity:1;}}
+
+/* floating TV frames */
+.hero-float{position:absolute;border:1px solid rgba(0,212,255,0.15);pointer-events:none;}
+.hero-float:nth-child(1){width:160px;height:100px;top:12%;left:6%;animation:floatA 8s ease-in-out infinite;}
+.hero-float:nth-child(2){width:110px;height:70px;top:22%;right:8%;animation:floatB 11s ease-in-out infinite;}
+.hero-float:nth-child(3){width:80px;height:50px;bottom:25%;left:10%;animation:floatA 9s ease-in-out infinite 2s;}
+.hero-float:nth-child(4){width:130px;height:80px;bottom:20%;right:5%;animation:floatB 12s ease-in-out infinite 1s;}
+@keyframes floatA{0%,100%{transform:translateY(0) rotate(-1deg);opacity:.4;}50%{transform:translateY(-14px) rotate(1deg);opacity:.7;}}
+@keyframes floatB{0%,100%{transform:translateY(0) rotate(1deg);opacity:.3;}50%{transform:translateY(-10px) rotate(-1deg);opacity:.6;}}
+.hero-float-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.hero-float-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.15) 3px,rgba(0,0,0,0.15) 4px);}
+.hero-float-label{font-family:'Space Mono',monospace;font-size:7px;letter-spacing:.1em;color:rgba(0,212,255,0.5);text-transform:uppercase;text-align:center;padding:4px;}
+
+.hero-content{position:relative;z-index:1;text-align:center;padding:120px 20px 60px;max-width:1100px;width:100%;}
+.hero-eyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.3em;color:var(--red);text-transform:uppercase;margin-bottom:28px;animation:fadeUp .8s ease both;}
+.hero-title{font-family:'Unbounded',sans-serif;font-size:clamp(44px,9vw,110px);font-weight:900;line-height:.92;margin-bottom:36px;animation:fadeUp .8s ease .1s both;}
+.hero-title .l1{display:block;color:var(--t1);}
+.hero-title .l2{display:block;background:linear-gradient(90deg,var(--blue) 0%,var(--red) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-deck{font-size:17px;color:var(--t2);max-width:580px;margin:0 auto 20px;line-height:1.75;animation:fadeUp .8s ease .2s both;}
+.hero-deck2{font-size:13px;color:var(--t3);max-width:500px;margin:0 auto 48px;line-height:1.7;font-family:'Space Mono',monospace;letter-spacing:.05em;animation:fadeUp .8s ease .3s both;}
+
+/* hero image strip */
+.hero-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:900px;margin:0 auto 56px;animation:fadeUp .8s ease .4s both;}
+.hero-strip-item{aspect-ratio:16/9;position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--gborder);}
+.hero-strip-item img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease,filter .4s ease;filter:grayscale(60%) brightness(.7);}
+.hero-strip-item:hover img{transform:scale(1.08);filter:grayscale(0%) brightness(.9);}
+.hero-strip-item::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(6,8,16,.8),transparent 60%);}
+.hero-strip-label{position:absolute;bottom:8px;left:10px;z-index:1;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.12em;color:var(--blue);text-transform:uppercase;}
+
+.hero-cta-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;animation:fadeUp .8s ease .45s both;}
+.btn-primary{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border:1px solid var(--blue);color:var(--blue);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;background:transparent;transition:all .3s;text-decoration:none;}
+.btn-primary:hover{background:rgba(0,212,255,.1);box-shadow:var(--gblue);}
+.btn-ghost{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border:1px solid var(--gborder);color:var(--t2);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;background:transparent;transition:all .3s;text-decoration:none;}
+.btn-ghost:hover{border-color:var(--t2);color:var(--t1);}
+
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;max-width:860px;margin:70px auto 0;background:var(--gborder);animation:fadeUp .8s ease .55s both;}
+.hstat{background:var(--black);padding:28px 16px;text-align:center;cursor:pointer;text-decoration:none;transition:background .3s;display:block;}
+.hstat:hover{background:rgba(0,212,255,.04);}
+.hstat-num{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:700;color:var(--blue);}
+.hstat-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--t3);text-transform:uppercase;margin-top:6px;line-height:1.4;}
+.hstat-sub{font-size:10px;color:var(--red);margin-top:4px;font-family:'Space Mono',monospace;}
+
+.scroll-ind{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadeUp 1s ease .8s both;}
+.scroll-ind span{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.25em;color:var(--t3);text-transform:uppercase;}
+.scroll-bar{width:1px;height:44px;background:linear-gradient(var(--blue),transparent);animation:scrlPulse 2s ease infinite;}
+@keyframes scrlPulse{0%,100%{opacity:.3;transform:scaleY(1);}50%{opacity:1;transform:scaleY(1.2);}}
+
+/* ── SECTION COMMONS ── */
+.sec{padding:120px 40px;max-width:1240px;margin:0 auto;}
+.sec-full{padding:100px 0;}
+.sec-inner{padding:0 40px;max-width:1240px;margin:0 auto;}
+.sec-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--red);text-transform:uppercase;margin-bottom:14px;}
+.sec-title{font-family:'Unbounded',sans-serif;font-size:clamp(26px,4vw,54px);font-weight:700;line-height:1.08;margin-bottom:20px;}
+.sec-body{font-size:15px;color:var(--t2);line-height:1.85;max-width:640px;margin-bottom:56px;}
+.divider-full{width:100%;height:1px;background:var(--gborder);}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease;}
+.reveal.vis{opacity:1;transform:translateY(0);}
+.rd1{transition-delay:.1s;}.rd2{transition-delay:.2s;}.rd3{transition-delay:.3s;}.rd4{transition-delay:.4s;}
+
+/* ── CLICKABLE FACTS ── */
+.fact-link{color:inherit;text-decoration:none;border-bottom:1px solid rgba(0,212,255,.35);padding-bottom:1px;transition:border-color .2s,color .2s;cursor:pointer;}
+.fact-link:hover{color:var(--blue);border-color:var(--blue);}
+.stat-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);border-radius:2px;cursor:pointer;transition:all .25s;text-decoration:none;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--blue);margin:4px;}
+.stat-pill:hover{background:rgba(0,212,255,.15);box-shadow:var(--gblue);}
+.stat-pill.red{background:rgba(255,45,85,.07);border-color:rgba(255,45,85,.25);color:var(--red);}
+.stat-pill.red:hover{background:rgba(255,45,85,.15);box-shadow:var(--gred);}
+.stat-pill.green{background:rgba(0,255,136,.06);border-color:rgba(0,255,136,.2);color:var(--green);}
+.stat-pill.green:hover{background:rgba(0,255,136,.12);}
+.pills-row{display:flex;flex-wrap:wrap;gap:6px;margin:24px 0;}
+
+/* ── MILESTONE SECTION ── */
+#milestone{background:var(--navy);border-top:1px solid var(--gborder);border-bottom:1px solid var(--gborder);padding:120px 0;}
+.milestone-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;padding:0 40px;max-width:1240px;margin:0 auto;}
+.iss-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:400px;}
+.iss-ring{position:absolute;border-radius:50%;border:1px solid;animation:ringPulse 3s ease infinite;}
+.iss-ring:nth-child(1){width:180px;height:180px;border-color:rgba(0,212,255,.35);animation-delay:0s;}
+.iss-ring:nth-child(2){width:260px;height:260px;border-color:rgba(0,212,255,.18);animation-delay:.5s;}
+.iss-ring:nth-child(3){width:340px;height:340px;border-color:rgba(0,212,255,.08);animation-delay:1s;}
+@keyframes ringPulse{0%,100%{opacity:.5;transform:scale(1);}50%{opacity:1;transform:scale(1.04);}}
+.iss-btn{width:130px;height:130px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#1a2a4a,#0a1020);border:3px solid var(--blue);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;cursor:pointer;position:relative;z-index:1;box-shadow:var(--gblue),inset 0 0 30px rgba(0,212,255,.1);transition:all .3s;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--blue);text-transform:uppercase;}
+.iss-btn:hover{transform:scale(1.06);box-shadow:0 0 50px rgba(0,212,255,.7),0 0 120px rgba(0,212,255,.25),inset 0 0 40px rgba(0,212,255,.2);}
+.iss-btn.pressed{border-color:var(--red);color:var(--red);box-shadow:var(--gred),inset 0 0 30px rgba(255,45,85,.1);}
+.iss-badge{position:absolute;top:-22px;right:-36px;background:var(--red);color:#fff;font-family:'Space Mono',monospace;font-size:9px;padding:4px 12px;letter-spacing:.1em;font-weight:700;}
+.iss-icon{font-size:30px;line-height:1;}
+/* orbit video embed */
+.orbit-embed{margin-top:40px;position:relative;border:1px solid var(--gborder);overflow:hidden;background:#000;}
+.orbit-embed iframe{width:100%;height:220px;display:block;border:none;}
+.orbit-embed-label{position:absolute;top:0;left:0;right:0;padding:6px 12px;background:rgba(6,8,16,.8);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--blue);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;}
+.timeline-line{position:relative;padding-left:30px;}
+.timeline-line::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(var(--blue),var(--red));opacity:.4;}
+.tl-item{margin-bottom:30px;position:relative;}
+.tl-item::before{content:'';position:absolute;left:-35px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px rgba(0,212,255,.6);}
+.tl-year{font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;color:var(--blue);margin-bottom:5px;letter-spacing:.1em;}
+.tl-text{font-size:13px;color:var(--t2);line-height:1.65;}
+
+/* ── MAP ── */
+#map-sec{padding:100px 0;background:var(--black);}
+.tz-grid{display:grid;grid-template-columns:repeat(11,1fr);gap:6px;margin-top:20px;}
+.tz-card{background:var(--glass);border:1px solid var(--gborder);padding:12px 4px;text-align:center;cursor:pointer;transition:all .35s;position:relative;overflow:hidden;border-radius:2px;}
+.tz-card.active{background:rgba(0,212,255,.09);border-color:var(--blue);box-shadow:0 0 18px rgba(0,212,255,.22);}
+.tz-card.passed{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.28);}
+.tz-name{font-family:'Space Mono',monospace;font-size:7px;letter-spacing:.04em;color:var(--t3);text-transform:uppercase;margin-bottom:6px;line-height:1.3;}
+.tz-offset{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:var(--t1);}
+.tz-time{font-family:'Space Mono',monospace;font-size:8px;color:var(--blue);margin-top:3px;}
+.map-btn{padding:10px 22px;background:transparent;border:1px solid var(--blue);color:var(--blue);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;border-radius:2px;}
+.map-btn:hover{background:rgba(0,212,255,.1);box-shadow:var(--gblue);}
+/* Satellite image strip below map */
+.map-photo-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:28px;}
+.map-photo{position:relative;overflow:hidden;border:1px solid var(--gborder);cursor:pointer;}
+.map-photo img{width:100%;height:160px;object-fit:cover;filter:hue-rotate(195deg) saturate(0.5) brightness(.65);transition:filter .4s,transform .5s;}
+.map-photo:hover img{filter:hue-rotate(195deg) saturate(1.1) brightness(.8);transform:scale(1.04);}
+.map-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(6,8,16,.75),transparent 55%);}
+.map-photo-caption{position:absolute;bottom:10px;left:12px;z-index:1;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.12em;color:var(--blue);text-transform:uppercase;}
+
+/* ── WALLED GARDENS ── */
+#gardens{background:var(--navy);border-top:1px solid var(--gborder);border-bottom:1px solid var(--gborder);padding:100px 0;}
+.gardens-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--gborder);}
+.gcard{background:var(--panel);padding:44px 32px;cursor:pointer;transition:all .4s;position:relative;overflow:hidden;}
+.gcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;opacity:0;transition:opacity .3s;}
+.gcard:hover{background:rgba(13,18,32,.95);}
+.gcard:hover::before{opacity:1;}
+.gcard.k::before{background:var(--blue);}
+.gcard.o::before{background:var(--green);}
+.gcard.m::before{background:var(--red);}
+.glogo{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;margin-bottom:6px;}
+.gcard.k .glogo{color:var(--blue);}
+.gcard.o .glogo{color:var(--green);}
+.gcard.m .glogo{color:var(--red);}
+.gparent{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;margin-bottom:28px;}
+.gstat{margin-bottom:18px;}
+.gstat-lbl{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--t3);text-transform:uppercase;margin-bottom:5px;}
+.gbar{height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:3px;}
+.gfill{height:100%;border-radius:2px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.gcard.k .gfill{background:var(--blue);}
+.gcard.o .gfill{background:var(--green);}
+.gcard.m .gfill{background:var(--red);}
+.gstat-val{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:var(--t1);}
+.gfeatures{margin-top:28px;display:flex;flex-direction:column;gap:8px;}
+.gfeat{font-size:12px;color:var(--t2);display:flex;align-items:flex-start;gap:10px;}
+.gfeat::before{content:'';width:4px;height:4px;border-radius:50%;margin-top:6px;flex-shrink:0;}
+.gcard.k .gfeat::before{background:var(--blue);}
+.gcard.o .gfeat::before{background:var(--green);}
+.gcard.m .gfeat::before{background:var(--red);}
+/* garden video block */
+.garden-media{margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--gborder);}
+.gmedia-item{background:var(--panel);padding:28px;position:relative;overflow:hidden;}
+.gmedia-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border:1px solid var(--gborder);margin-bottom:14px;filter:brightness(.7);transition:filter .3s;}
+.gmedia-thumb:hover{filter:brightness(.9);}
+.gmedia-title{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;margin-bottom:6px;}
+.gmedia-desc{font-size:12px;color:var(--t2);line-height:1.6;}
+.play-overlay{position:relative;cursor:pointer;}
+.play-overlay::after{content:'▶';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;background:rgba(0,212,255,.2);border:1px solid var(--blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--blue);}
+
+/* ── DVB-T2 ── */
+#dataviz{padding:100px 0;background:var(--black);}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+.comp-card{background:var(--panel);border:1px solid var(--gborder);padding:44px;position:relative;overflow:hidden;}
+.comp-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;}
+.comp-card.late::after{background:linear-gradient(90deg,var(--red),transparent);}
+.comp-card.adv::after{background:linear-gradient(90deg,var(--blue),transparent);}
+.comp-tag{display:inline-block;padding:4px 12px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:22px;border-radius:2px;}
+.late .comp-tag{background:rgba(255,45,85,.12);color:var(--red);border:1px solid rgba(255,45,85,.3);}
+.adv .comp-tag{background:rgba(0,212,255,.09);color:var(--blue);border:1px solid rgba(0,212,255,.3);}
+.big-n{font-family:'Unbounded',sans-serif;font-size:68px;font-weight:900;line-height:1;margin-bottom:8px;}
+.late .big-n{color:var(--red);opacity:.65;}
+.adv .big-n{color:var(--blue);opacity:.8;}
+.mrow{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+.mlbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;width:90px;flex-shrink:0;}
+.mbar{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.mfill{height:100%;border-radius:3px;}
+.late .mfill{background:var(--red);}
+.adv .mfill{background:var(--blue);}
+.mval{font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;width:36px;text-align:right;flex-shrink:0;}
+.late .mval{color:var(--red);}
+.adv .mval{color:var(--blue);}
+/* youtube explainer */
+.dvb-video{grid-column:1/-1;background:var(--panel);border:1px solid var(--gborder);overflow:hidden;}
+.dvb-video-header{padding:20px 28px;border-bottom:1px solid var(--gborder);display:flex;justify-content:space-between;align-items:center;}
+.dvb-video-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;}
+.dvb-video-tag{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--blue);text-transform:uppercase;}
+.dvb-video iframe{width:100%;height:340px;display:block;border:none;}
+
+/* ── MULTIPLEX ── */
+#multiplex{background:var(--navy);border-top:1px solid var(--gborder);padding:100px 0;overflow:hidden;}
+.era-track{display:flex;gap:3px;background:rgba(255,255,255,.03);border:1px solid var(--gborder);padding:2px;margin-bottom:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.era-tab{flex:1;min-width:80px;padding:10px 8px;background:transparent;border:none;color:var(--t3);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:all .3s;text-align:center;line-height:1.4;white-space:nowrap;border-radius:2px;}
+.era-tab:hover{color:var(--t2);}
+.era-tab.active{background:rgba(0,212,255,.12);color:var(--blue);}
+.era-content{display:none;background:var(--panel);border:1px solid var(--gborder);padding:44px;animation:fadeIn .4s ease;}
+.era-content.active{display:grid;grid-template-columns:1fr 1fr;gap:44px;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.era-screen{background:#000;aspect-ratio:16/9;position:relative;overflow:hidden;border:2px solid rgba(255,255,255,.07);}
+.era-screen-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;}
+.era-screen-inner.soviet{background:repeating-linear-gradient(0deg,#111,#111 1px,#1a1a1a 1px,#1a1a1a 2px);filter:contrast(110%) brightness(.85);}
+.era-screen-inner.nineties{background:linear-gradient(135deg,#0a0a0a,#1a0a0a 50%,#0a1a0a);}
+.era-screen-inner.twothousands{background:linear-gradient(180deg,#000020,#001020);}
+.era-screen-inner.dvb{background:linear-gradient(135deg,#000818,#001828);}
+.era-screen-inner.stream{background:radial-gradient(ellipse,#0a1030,#000010);}
+.era-screen-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.12) 3px,rgba(0,0,0,.12) 4px);pointer-events:none;}
+.era-h{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;margin-bottom:12px;}
+.era-p{font-size:13px;color:var(--t2);line-height:1.8;margin-bottom:20px;}
+.era-fact-item{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start;}
+.era-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:6px;flex-shrink:0;}
+.era-ft{font-size:12px;color:var(--t2);line-height:1.6;}
+/* YouTube inside era */
+.era-yt{margin-top:16px;border:1px solid var(--gborder);}
+.era-yt iframe{width:100%;height:160px;display:block;border:none;}
+.era-yt-label{padding:6px 10px;background:rgba(255,0,0,.08);border-bottom:1px solid var(--gborder);font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.15em;color:#FF4444;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+.era-yt-label::before{content:'▶';font-size:8px;}
+
+/* ── CONVERGENCE CARDS ── */
+#convergence{padding:100px 0;background:var(--black);}
+.conv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.conv-card{background:var(--panel);border:1px solid var(--gborder);overflow:hidden;cursor:pointer;transition:height .5s cubic-bezier(.4,0,.2,1),border-color .3s,box-shadow .3s;height:290px;position:relative;}
+.conv-card:hover{height:500px;border-color:var(--blue);box-shadow:0 0 40px rgba(0,212,255,.1);}
+.conv-front{padding:32px;height:290px;display:flex;flex-direction:column;justify-content:space-between;}
+.conv-ch{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:900;color:var(--t1);}
+.conv-yr{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;margin-top:5px;}
+.conv-tg{font-size:12px;color:var(--t2);line-height:1.65;}
+.conv-arr{width:30px;height:30px;border:1px solid var(--gborder);display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:14px;transition:all .3s;}
+.conv-card:hover .conv-arr{background:var(--blue);color:var(--black);border-color:var(--blue);}
+.conv-back{padding:0 32px 32px;opacity:0;transform:translateY(8px);transition:all .4s .1s;}
+.conv-card:hover .conv-back{opacity:1;transform:translateY(0);}
+.conv-div{height:1px;background:var(--gborder);margin-bottom:20px;}
+.conv-ititle{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--blue);text-transform:uppercase;margin-bottom:14px;}
+.conv-list{list-style:none;display:flex;flex-direction:column;gap:9px;}
+.conv-list li{font-size:12px;color:var(--t2);display:flex;align-items:flex-start;gap:8px;}
+.conv-list li::before{content:'→';color:var(--blue);font-size:11px;flex-shrink:0;margin-top:1px;}
+.conv-badge{display:inline-block;padding:2px 8px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:2px;font-family:'Space Mono',monospace;font-size:8px;color:var(--blue);letter-spacing:.05em;text-transform:uppercase;margin-top:18px;}
+
+/* ── INTERACTIVE VIDEO GALLERY ── */
+#media-gallery{background:var(--navy);border-top:1px solid var(--gborder);padding:100px 0;}
+.gallery-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:var(--gborder);}
+.gal-item{background:var(--panel);position:relative;overflow:hidden;cursor:pointer;}
+.gal-item.featured{grid-column:span 2;}
+.gal-thumb{width:100%;display:block;object-fit:cover;transition:transform .5s ease,filter .4s;filter:brightness(.6) saturate(.7);}
+.gal-item.featured .gal-thumb{height:360px;}
+.gal-item:not(.featured) .gal-thumb{height:220px;}
+.gal-item:hover .gal-thumb{transform:scale(1.04);filter:brightness(.8) saturate(1);}
+.gal-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:24px;}
+.gal-overlay-bg{position:absolute;inset:0;background:linear-gradient(to top,rgba(6,8,16,.9) 0%,rgba(6,8,16,.3) 50%,transparent 100%);}
+.gal-tag{position:absolute;top:16px;left:16px;background:rgba(6,8,16,.7);border:1px solid var(--gborder);padding:4px 10px;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.15em;color:var(--blue);text-transform:uppercase;}
+.gal-title{position:relative;z-index:1;font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px;}
+.gal-desc{position:relative;z-index:1;font-size:12px;color:var(--t2);line-height:1.5;}
+.play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,212,255,.18);border:1px solid var(--blue);display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:18px;transition:all .3s;opacity:0;}
+.gal-item:hover .play-btn{opacity:1;box-shadow:var(--gblue);}
+/* Lightbox */
+#lightbox{position:fixed;inset:0;background:rgba(6,8,16,.96);z-index:20000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;padding:20px;}
+#lightbox.open{display:flex;}
+#lightbox iframe{width:min(90vw,960px);height:min(56.25vw,540px);border:none;display:block;}
+#lightbox-close{position:absolute;top:20px;right:24px;font-size:32px;color:var(--t2);cursor:pointer;background:none;border:none;line-height:1;}
+#lightbox-title{font-family:'Unbounded',sans-serif;font-size:15px;color:var(--t2);text-align:center;}
+
+/* ── FOOTER ── */
+footer{background:var(--navy);border-top:1px solid var(--gborder);padding:60px 40px;text-align:center;}
+.foot-logo{font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--t3);text-transform:uppercase;margin-bottom:14px;}
+.foot-links{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+.foot-links a{font-family:'Space Mono',monospace;font-size:9px;color:var(--t3);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s;}
+.foot-links a:hover{color:var(--blue);}
+.foot-copy{font-family:'Space Mono',monospace;font-size:10px;color:var(--t3);letter-spacing:.05em;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── MOBILE ── */
+@media(max-width:900px){
+  nav{padding:12px 20px;}
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  #lang-btn{top:14px;right:60px;}
+  .hero-content{padding:90px 20px 40px;}
+  .hero-strip{grid-template-columns:repeat(2,1fr);}
+  .hero-stats{grid-template-columns:repeat(2,1fr);}
+  .milestone-grid{grid-template-columns:1fr;gap:48px;padding:0 20px;}
+  .iss-visual{min-height:260px;}
+  .iss-ring:nth-child(3){width:230px;height:230px;}
+  .sec{padding:80px 20px;}
+  .sec-inner{padding:0 20px;}
+  .tz-grid{grid-template-columns:repeat(4,1fr);}
+  .gardens-grid{grid-template-columns:1fr;}
+  .garden-media{grid-template-columns:1fr;}
+  .comp-grid{grid-template-columns:1fr;}
+  .era-content.active{grid-template-columns:1fr;}
+  .conv-grid{grid-template-columns:1fr;}
+  .conv-card{height:auto!important;}
+  .conv-back{opacity:1!important;transform:translateY(0)!important;}
+  .gallery-grid{grid-template-columns:1fr;}
+  .gal-item.featured{grid-column:span 1;}
+  .map-photo-strip{grid-template-columns:1fr 1fr;}
+  #milestone{padding:80px 0;}
+  #gardens{padding:80px 0;}
+  #dataviz{padding:80px 0;}
+  #multiplex{padding:80px 0;}
+  #convergence{padding:80px 0;}
+  #media-gallery{padding:80px 0;}
+}
+@media(max-width:520px){
+  .hero-strip{grid-template-columns:1fr 1fr;}
+  .hero-stats{grid-template-columns:1fr 1fr;}
+  .hstat-num{font-size:24px;}
+  .tz-grid{grid-template-columns:repeat(3,1fr);}
+  .map-photo-strip{grid-template-columns:1fr;}
+  .hero-title{font-size:clamp(38px,12vw,64px);}
+}
+
+/* ── SOURCE TOOLTIP ── */
+.src-tip{position:relative;display:inline;}
+.src-tip::after{content:attr(data-src);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(10,14,26,.97);border:1px solid var(--gborder);color:var(--t2);font-family:'Space Mono',monospace;font-size:9px;padding:5px 10px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;letter-spacing:.05em;z-index:100;}
+.src-tip:hover::after{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="sprog"></div>
+<div id="grain-overlay"></div>
+
+<!-- LANG BUTTON -->
+<button id="lang-btn" onclick="toggleLang()">RU / EN</button>
+
+<!-- MOBILE MENU -->
+<div id="mobile-menu">
+  <button class="close-btn" onclick="closeMobile()">✕</button>
+  <a href="#milestone" onclick="closeMobile()" data-en="2019 Milestone" data-ru="2019 Вехи">2019 Milestone</a>
+  <a href="#map-sec" onclick="closeMobile()" data-en="Time Zones" data-ru="Часовые пояса">Time Zones</a>
+  <a href="#gardens" onclick="closeMobile()" data-en="Ecosystem" data-ru="Экосистема">Ecosystem</a>
+  <a href="#dataviz" onclick="closeMobile()" data-en="DVB-T2" data-ru="ЦТВ">DVB-T2</a>
+  <a href="#multiplex" onclick="closeMobile()" data-en="Multiplex" data-ru="Мультиплекс">Multiplex</a>
+  <a href="#convergence" onclick="closeMobile()" data-en="Convergence" data-ru="Конвергенция">Convergence</a>
+</div>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <a href="#hero" class="nav-logo">Signal <span>to</span> Stream</a>
+  <div class="nav-links">
+    <a href="#milestone" data-en="2019 Milestone" data-ru="2019 Вехи">2019 Milestone</a>
+    <a href="#map-sec" data-en="Time Zones" data-ru="Часовые пояса">Time Zones</a>
+    <a href="#gardens" data-en="Ecosystem" data-ru="Экосистема">Ecosystem</a>
+    <a href="#dataviz" data-en="DVB-T2" data-ru="ЦТВ">DVB-T2</a>
+    <a href="#multiplex" data-en="Multiplex" data-ru="Мультиплекс">Multiplex</a>
+    <a href="#convergence" data-en="Convergence" data-ru="Конвергенция">Convergence</a>
+  </div>
+  <div class="hamburger" onclick="openMobile()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div id="hero">
+  <div class="hero-bg">
+    <div class="hero-bg-img"></div>
+    <div class="hero-bg-overlay"></div>
+    <div class="hero-grid"></div>
+    <!-- floating TV frame overlays -->
+    <div class="hero-float"><div class="hero-float-inner"><div class="hero-float-label" data-en="Analog Signal" data-ru="Аналогия">Analog Signal</div></div><div class="hero-float-scan"></div></div>
+    <div class="hero-float"><div class="hero-float-inner"><div class="hero-float-label" data-en="DVB-T2" data-ru="ЦТВ">DVB-T2</div></div><div class="hero-float-scan"></div></div>
+    <div class="hero-float"><div class="hero-float-inner"><div class="hero-float-label" data-en="OTT Stream" data-ru="ОТТ">OTT Stream</div></div><div class="hero-float-scan"></div></div>
+    <div class="hero-float"><div class="hero-float-inner"><div class="hero-float-label" data-en="4K UHD" data-ru="4К UHD">4K UHD</div></div><div class="hero-float-scan"></div></div>
+  </div>
+
+  <div class="hero-content">
+    <p class="hero-eyebrow" data-en="// Analytical Dispatch — Digital Infrastructure" data-ru="// Аналитика — Цифровая инфраструктура">// Analytical Dispatch — Digital Infrastructure</p>
+    <h1 class="hero-title">
+      <span class="l1" data-en="Signal" data-ru="Сигнал">Signal</span>
+      <span class="l2" data-en="to Stream" data-ru="в Стриминг">to Stream</span>
+    </h1>
+    <p class="hero-deck" data-en="Russia's 25-year transformation from Soviet-era broadcast infrastructure to a contested, algorithm-driven streaming ecosystem — traced through data, geography, and political economy." data-ru="25-летняя трансформация России: от советской телевизионной инфраструктуры к конкурентной стриминговой экосистеме — данные, география, политическая экономия.">Russia's 25-year transformation from Soviet-era broadcast infrastructure to a contested, algorithm-driven streaming ecosystem — traced through data, geography, and political economy.</p>
+    <p class="hero-deck2" data-en="From the ISS button press that ended analog TV · to the walled gardens of Kinopoisk, Okko and KION" data-ru="От нажатия кнопки МКС, завершившей аналоговое ТВ · до огороженных садов Кинопоиска, Окко и KION">From the ISS button press that ended analog TV · to the walled gardens of Kinopoisk, Okko and KION</p>
+
+    <!-- Hero photo strip -->
+    <div class="hero-strip">
+      <div class="hero-strip-item">
+        <img src="https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?w=400&q=75&auto=format&fit=crop" alt="Broadcasting tower" loading="lazy">
+        <div class="hero-strip-label" data-en="Broadcast Tower" data-ru="Вышка">Broadcast Tower</div>
+      </div>
+      <div class="hero-strip-item">
+        <img src="https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&q=75&auto=format&fit=crop" alt="TV screen night" loading="lazy">
+        <div class="hero-strip-label" data-en="Night Broadcast" data-ru="Ночной эфир">Night Broadcast</div>
+      </div>
+      <div class="hero-strip-item">
+        <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=75&auto=format&fit=crop" alt="Streaming device" loading="lazy">
+        <div class="hero-strip-label" data-en="Smart TV Era" data-ru="Умный ТВ">Smart TV Era</div>
+      </div>
+      <div class="hero-strip-item">
+        <img src="https://images.unsplash.com/photo-1539721972319-f0e80a00d424?w=400&q=75&auto=format&fit=crop" alt="Satellite dish" loading="lazy">
+        <div class="hero-strip-label" data-en="Satellite" data-ru="Спутник">Satellite</div>
+      </div>
+    </div>
+
+    <div class="hero-cta-row">
+      <button class="btn-primary" onclick="document.getElementById('milestone').scrollIntoView({behavior:'smooth'})" data-en="↓  Begin Analysis" data-ru="↓  Начать анализ">↓  Begin Analysis</button>
+      <a class="btn-ghost" href="https://www.rtr-planet.com" target="_blank" rel="noopener" data-en="RTR Planet →" data-ru="РТР Планета →">RTR Planet →</a>
+    </div>
+
+    <!-- Stats row — animated radial ring cards -->
+    <style>
+    .rstat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;max-width:900px;margin:60px auto 0;background:var(--gborder);animation:fadeUp .8s ease .55s both;}
+    .rstat{background:var(--black);padding:28px 12px 24px;text-align:center;cursor:pointer;text-decoration:none;transition:background .3s;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;overflow:hidden;}
+    .rstat::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(0,212,255,.07),transparent 70%);opacity:0;transition:opacity .4s;}
+    .rstat:hover{background:rgba(0,212,255,.03);}
+    .rstat:hover::after{opacity:1;}
+    .rstat svg{overflow:visible;}
+    .rstat-ring-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:3;}
+    .rstat-ring-fill{fill:none;stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1);}
+    .rstat-inner{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .rstat-num{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:700;line-height:1;}
+    .rstat-unit{font-family:'Space Mono',monospace;font-size:9px;color:var(--t3);margin-top:1px;}
+    .rstat-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;line-height:1.4;max-width:90px;}
+    .rstat-src{font-size:9px;color:var(--red);font-family:'Space Mono',monospace;margin-top:2px;}
+    @media(max-width:900px){.rstat-grid{grid-template-columns:repeat(2,1fr);max-width:480px;}}
+    @media(max-width:520px){.rstat-num{font-size:18px;}}
+    </style>
+    <div class="rstat-grid">
+      <a class="rstat" href="https://en.wikipedia.org/wiki/Time_in_Russia" target="_blank" rel="noopener">
+        <svg width="90" height="90" viewBox="0 0 90 90">
+          <circle class="rstat-ring-bg" cx="45" cy="45" r="38"/>
+          <circle class="rstat-ring-fill" id="ring1" cx="45" cy="45" r="38" stroke="var(--blue)"
+            stroke-dasharray="239" stroke-dashoffset="239" transform="rotate(-90 45 45)"/>
+        </svg>
+        <div class="rstat-inner" style="top:0;left:0;right:0;bottom:0;">
+          <div class="rstat-num" id="st1" style="color:var(--blue)">0</div>
+          <div class="rstat-unit" data-en="zones" data-ru="зон">zones</div>
+        </div>
+        <div class="rstat-label" data-en="Time Zones" data-ru="Часовых поясов">Time Zones</div>
+        <div class="rstat-src" data-en="↗ source" data-ru="↗ источник">↗ source</div>
+      </a>
+      <a class="rstat" href="https://www.statista.com/topics/4109/television-in-russia/" target="_blank" rel="noopener">
+        <svg width="90" height="90" viewBox="0 0 90 90">
+          <circle class="rstat-ring-bg" cx="45" cy="45" r="38"/>
+          <circle class="rstat-ring-fill" id="ring2" cx="45" cy="45" r="38" stroke="var(--green)"
+            stroke-dasharray="239" stroke-dashoffset="239" transform="rotate(-90 45 45)"/>
+        </svg>
+        <div class="rstat-inner" style="top:0;left:0;right:0;bottom:0;">
+          <div class="rstat-num" id="st2" style="color:var(--green)">0</div>
+          <div class="rstat-unit">M</div>
+        </div>
+        <div class="rstat-label" data-en="TV Households" data-ru="ТВ-домохозяйств">TV Households</div>
+        <div class="rstat-src" data-en="↗ source" data-ru="↗ источник">↗ source</div>
+      </a>
+      <a class="rstat" href="https://en.wikipedia.org/wiki/DVB-T2" target="_blank" rel="noopener">
+        <svg width="90" height="90" viewBox="0 0 90 90">
+          <circle class="rstat-ring-bg" cx="45" cy="45" r="38"/>
+          <circle class="rstat-ring-fill" id="ring3" cx="45" cy="45" r="38" stroke="var(--blue)"
+            stroke-dasharray="239" stroke-dashoffset="239" transform="rotate(-90 45 45)"/>
+        </svg>
+        <div class="rstat-inner" style="top:0;left:0;right:0;bottom:0;">
+          <div class="rstat-num" id="st3" style="color:var(--blue)">0</div>
+          <div class="rstat-unit" data-en="ch free" data-ru="кан">ch free</div>
+        </div>
+        <div class="rstat-label" data-en="Free Channels (DVB-T2)" data-ru="Бесплатных каналов">Free Channels (DVB-T2)</div>
+        <div class="rstat-src" data-en="↗ source" data-ru="↗ источник">↗ source</div>
+      </a>
+      <a class="rstat" href="https://www.rbc.ru/technology_and_media/04/12/2023/656ae0ab9a7947c87bec5d35" target="_blank" rel="noopener">
+        <svg width="90" height="90" viewBox="0 0 90 90">
+          <circle class="rstat-ring-bg" cx="45" cy="45" r="38"/>
+          <circle class="rstat-ring-fill" id="ring4" cx="45" cy="45" r="38" stroke="var(--red)"
+            stroke-dasharray="239" stroke-dashoffset="239" transform="rotate(-90 45 45)"/>
+        </svg>
+        <div class="rstat-inner" style="top:0;left:0;right:0;bottom:0;">
+          <div class="rstat-num" id="st4" style="color:var(--red)">$0</div>
+          <div class="rstat-unit">B+</div>
+        </div>
+        <div class="rstat-label" data-en="OTT Market 2023" data-ru="OTT рынок 2023">OTT Market 2023</div>
+        <div class="rstat-src" data-en="↗ source" data-ru="↗ источник">↗ source</div>
+      </a>
+    </div>
+  </div>
+  <div class="scroll-ind">
+    <span data-en="scroll" data-ru="скролл">scroll</span>
+    <div class="scroll-bar"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MILESTONE ═══════════════ -->
+<div id="milestone">
+  <div class="milestone-grid">
+    <div>
+      <p class="sec-label reveal" data-en="// 01 — The 2019 Milestone" data-ru="// 01 — Веха 2019 года">// 01 — The 2019 Milestone</p>
+      <h2 class="sec-title reveal" data-en="The Button From Orbit" data-ru="Кнопка из космоса">The Button From Orbit</h2>
+      <p class="sec-body reveal rd1" data-en="On June 3, 2019, cosmonaut Oleg Kononenko pressed a symbolic button aboard the International Space Station, officially concluding Russia's analog television broadcast — a decade-long, $4.2 billion infrastructure overhaul spanning 85 regions and 5,040 transmitter sites." data-ru="3 июня 2019 года космонавт Олег Кононенко нажал символическую кнопку на борту МКС, официально завершив аналоговое телевещание России — десятилетний проект стоимостью 4,2 млрд долларов, охвативший 85 регионов и 5040 передатчиков.">On June 3, 2019, cosmonaut Oleg Kononenko pressed a symbolic button aboard the International Space Station, officially concluding Russia's analog television broadcast — a decade-long, $4.2 billion infrastructure overhaul spanning 85 regions and 5,040 transmitter sites.</p>
+
+      <!-- Big callout stat trio -->
+      <div class="reveal rd2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--gborder);margin-bottom:36px;">
+        <a href="https://www.vedomosti.ru/technology/articles/2019/06/03/802696-analogovoe-televidenie" target="_blank" rel="noopener" style="text-decoration:none;background:var(--panel);padding:20px 16px;display:flex;flex-direction:column;gap:4px;transition:background .3s;border-left:3px solid var(--blue);" onmouseover="this.style.background='rgba(0,212,255,0.06)'" onmouseout="this.style.background='var(--panel)'">
+          <span style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;color:var(--blue);line-height:1;">$4.2B</span>
+          <span style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;" data-en="Federal Investment" data-ru="Федеральные инвестиции">Federal Investment</span>
+          <span style="font-family:'Space Mono',monospace;font-size:8px;color:var(--blue);margin-top:4px;" data-en="↗ Vedomosti" data-ru="↗ Ведомости">↗ Vedomosti</span>
+        </a>
+        <a href="https://tass.ru/obschestvo/6504613" target="_blank" rel="noopener" style="text-decoration:none;background:var(--panel);padding:20px 16px;display:flex;flex-direction:column;gap:4px;transition:background .3s;border-left:3px solid var(--red);" onmouseover="this.style.background='rgba(255,45,85,0.06)'" onmouseout="this.style.background='var(--panel)'">
+          <span style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;color:var(--red);line-height:1;">85</span>
+          <span style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;" data-en="Regions Covered" data-ru="Регионов охвачено">Regions Covered</span>
+          <span style="font-family:'Space Mono',monospace;font-size:8px;color:var(--red);margin-top:4px;" data-en="↗ TASS" data-ru="↗ ТАСС">↗ TASS</span>
+        </a>
+        <a href="https://digital.gov.ru/ru/events/38695/" target="_blank" rel="noopener" style="text-decoration:none;background:var(--panel);padding:20px 16px;display:flex;flex-direction:column;gap:4px;transition:background .3s;border-left:3px solid var(--green);" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='var(--panel)'">
+          <span style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;color:var(--green);line-height:1;">5,040</span>
+          <span style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;" data-en="Transmitter Sites" data-ru="Передатчиков">Transmitter Sites</span>
+          <span style="font-family:'Space Mono',monospace;font-size:8px;color:var(--green);margin-top:4px;" data-en="↗ Mintsifry" data-ru="↗ Минцифры">↗ Mintsifry</span>
+        </a>
+      </div>
+
+      <div class="timeline-line reveal rd2">
+        <div class="tl-item">
+          <div class="tl-year">2009</div>
+          <div class="tl-text" data-en="Federal Target Program approved. DVB-T2 standard selected — skipping first-generation DVB-T entirely." data-ru="Утверждена Федеральная целевая программа. Выбран стандарт DVB-T2 — первое поколение было полностью пропущено.">Federal Target Program approved. DVB-T2 standard selected — skipping first-generation DVB-T entirely.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">2012–2018</div>
+          <div class="tl-text" data-en="Two multiplexes of 10 channels each rolled out nationally. 98% population coverage achieved." data-ru="По всей стране развёрнуты два мультиплекса по 10 каналов каждый. Охват населения достиг 98%.">Two multiplexes of 10 channels each rolled out nationally. 98% population coverage achieved.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">June 3, 2019</div>
+          <div class="tl-text" data-en="Analog signal terminated. ISS cosmonaut presses the ceremonial switch. Russia completes transition — later than Western Europe, but on a more advanced technical standard." data-ru="Аналоговый сигнал отключён. Космонавт МКС нажимает церемониальный переключатель. Россия завершает переход позже Западной Европы, но на более передовом техническом стандарте.">Analog signal terminated. ISS cosmonaut presses the ceremonial switch. Russia completes transition — later than Western Europe, but on a more advanced technical standard.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-year">2019–Present</div>
+          <div class="tl-text" data-en="OTT streaming market grows 40%+ annually. The hardware refresh catalyzes a second digital revolution." data-ru="Рынок OTT-стриминга растёт более чем на 40% в год. Обновление оборудования катализирует вторую цифровую революцию.">OTT streaming market grows 40%+ annually. The hardware refresh catalyzes a second digital revolution.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="iss-visual reveal">
+        <div class="iss-ring"></div>
+        <div class="iss-ring"></div>
+        <div class="iss-ring"></div>
+        <button class="iss-btn" id="iss-btn" onclick="pressISS()">
+          <div class="iss-badge">ISS — 2019</div>
+          <div class="iss-icon">🛰️</div>
+          <div data-en="Press" data-ru="Нажать">Press</div>
+        </button>
+      </div>
+      <!-- ISS YouTube embed -->
+      <div class="orbit-embed reveal rd2" style="margin-top:32px;">
+        <div class="orbit-embed-label">
+          <span data-en="▶ Russia's Digital Switchover — Documentary Clip" data-ru="▶ Цифровой переход России — документальный клип">▶ Russia's Digital Switchover — Documentary Clip</span>
+          <span style="color:var(--t3);font-size:8px;" data-en="YouTube" data-ru="YouTube">YouTube</span>
+        </div>
+        <iframe src="https://www.youtube.com/embed/PYbNOhwQCjg?start=0&mute=1&rel=0&modestbranding=1" title="Russian Digital TV Switchover" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAP ═══════════════ -->
+<div id="map-sec">
+  <div class="sec-inner">
+    <p class="sec-label reveal" data-en="// 02 — The 11 Time Zone Challenge" data-ru="// 02 — 11 часовых поясов">// 02 — The 11 Time Zone Challenge</p>
+    <h2 class="sec-title reveal" data-en="The Digital Wave" data-ru="Цифровая волна">The Digital Wave</h2>
+    <p class="sec-body reveal rd1" data-en="Russia spans 11 time zones — more than any other nation. The analog switch-off cascaded westward over 10 hours, from Vladivostok on the Pacific to Kaliningrad on the Baltic. Watch the termination wave travel 6,200km." data-ru="Россия охватывает 11 часовых поясов — больше, чем любая другая страна. Отключение аналогового сигнала прошло с востока на запад за 10 часов: от Владивостока на Тихом океане до Калининграда на Балтийском море.">Russia spans 11 time zones — more than any other nation. The analog switch-off cascaded westward over 10 hours, from Vladivostok on the Pacific to Kaliningrad on the Baltic. Watch the termination wave travel 6,200km.</p>
+
+    <div class="pills-row reveal">
+      <a class="stat-pill" href="https://en.wikipedia.org/wiki/Time_in_Russia" target="_blank" rel="noopener">↗ 11 time zones</a>
+      <a class="stat-pill red" href="https://en.wikipedia.org/wiki/Vladivostok" target="_blank" rel="noopener">↗ Vladivostok UTC+10</a>
+      <a class="stat-pill green" href="https://en.wikipedia.org/wiki/Kaliningrad" target="_blank" rel="noopener">↗ Kaliningrad UTC+2</a>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;" class="reveal rd1">
+      <button class="map-btn" onclick="startWave()" data-en="▶ Launch Wave" data-ru="▶ Запустить волну">▶ Launch Wave</button>
+      <button class="map-btn" onclick="resetWave()" data-en="↺ Reset" data-ru="↺ Сбросить">↺ Reset</button>
+      <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--t3);align-self:center;" id="wave-status" data-en="Ready — Far East to Kaliningrad" data-ru="Готово — с Дальнего Востока до Калининграда">Ready — Far East to Kaliningrad</span>
+    </div>
+
+    <div style="background:rgba(0,212,255,.02);border:1px solid var(--gborder);padding:32px 24px;margin-bottom:24px;" class="reveal rd2">
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+        <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--blue);letter-spacing:.2em;" data-en="← EAST (Vladivostok)" data-ru="← ВОСТОК (Владивосток)">← EAST (Vladivostok)</span>
+        <span style="font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;color:var(--t3);" data-en="RUSSIA" data-ru="РОССИЯ">RUSSIA</span>
+        <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--blue);letter-spacing:.2em;" data-en="WEST (Kaliningrad) →" data-ru="ЗАПАД (Калининград) →">WEST (Kaliningrad) →</span>
+      </div>
+      <div class="tz-grid" id="tz-grid"></div>
+      <div style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);"></div><span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--t3);" data-en="Terminated" data-ru="Отключён">Terminated</span></div>
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;background:rgba(0,212,255,.09);border:1px solid var(--blue);box-shadow:0 0 8px rgba(0,212,255,.4);"></div><span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--t3);" data-en="Active switchover" data-ru="Переключение">Active switchover</span></div>
+      </div>
+    </div>
+
+    <!-- Landscape photo strip -->
+    <div class="map-photo-strip reveal rd2">
+      <div class="map-photo">
+        <img src="https://images.unsplash.com/photo-1513326738677-b964603b136d?w=600&q=75&auto=format&fit=crop" alt="Vladivostok" loading="lazy">
+        <div class="map-photo-caption" data-en="Vladivostok · UTC+10" data-ru="Владивосток · UTC+10">Vladivostok · UTC+10</div>
+      </div>
+      <div class="map-photo">
+        <img src="https://images.unsplash.com/photo-1513326738677-b964603b136d?w=600&q=75&auto=format&fit=crop" alt="Moscow skyline" loading="lazy" style="object-position:30% center;">
+        <div class="map-photo-caption" data-en="Moscow · UTC+3" data-ru="Москва · UTC+3">Moscow · UTC+3</div>
+      </div>
+      <div class="map-photo">
+        <img src="https://images.unsplash.com/photo-1539604870813-86e69e2b6f36?w=600&q=75&auto=format&fit=crop" alt="Kaliningrad" loading="lazy">
+        <div class="map-photo-caption" data-en="Kaliningrad · UTC+2" data-ru="Калининград · UTC+2">Kaliningrad · UTC+2</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ WALLED GARDENS ═══════════════ -->
+<div id="gardens">
+  <div class="sec-inner">
+    <p class="sec-label reveal" data-en="// 03 — The Ecosystem" data-ru="// 03 — Экосистема">// 03 — The Ecosystem</p>
+    <h2 class="sec-title reveal" data-en="The Walled Gardens" data-ru="Огороженные сады">The Walled Gardens</h2>
+    <p class="sec-body reveal rd1" data-en="Three corporate giants carved Russia's streaming landscape into competing ecosystems — Yandex, Sberbank, and MTS each backed a major platform. The result: a fragmented but fast-growing $2B+ market." data-ru="Три корпоративных гиганта — Яндекс, Сбербанк и МТС — разделили стриминговый рынок России на конкурирующие экосистемы, создав быстро растущий рынок объёмом более 2 млрд долларов.">Three corporate giants carved Russia's streaming landscape into competing ecosystems — Yandex, Sberbank, and MTS each backed a major platform. The result: a fragmented but fast-growing $2B+ market.</p>
+    <div class="pills-row reveal rd1">
+      <a class="stat-pill" href="https://kinopoisk.ru" target="_blank" rel="noopener">↗ Kinopoisk.ru</a>
+      <a class="stat-pill green" href="https://okko.tv" target="_blank" rel="noopener">↗ Okko.tv</a>
+      <a class="stat-pill red" href="https://kion.ru" target="_blank" rel="noopener">↗ KION.ru</a>
+    </div>
+  </div>
+  <div class="gardens-grid reveal">
+    <div class="gcard k">
+      <div class="glogo">Kinopoisk</div>
+      <div class="gparent" data-en="Yandex Ecosystem" data-ru="Экосистема Яндекс">Yandex Ecosystem</div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Market Share" data-ru="Доля рынка">Market Share</div><div class="gbar"><div class="gfill" data-t="38"></div></div><div class="gstat-val">~38%</div></div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Content Library" data-ru="Библиотека">Content Library</div><div class="gbar"><div class="gfill" data-t="85"></div></div><div class="gstat-val">100,000+ <span data-en="titles" data-ru="тайтлов">titles</span></div></div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Originals Output" data-ru="Оригинальный контент">Originals Output</div><div class="gbar"><div class="gfill" data-t="72"></div></div><div class="gstat-val" data-en="High velocity" data-ru="Высокий темп">High velocity</div></div>
+      <div class="gfeatures">
+        <div class="gfeat" data-en="Bundled with Yandex Plus subscription" data-ru="В связке с подпиской Яндекс Плюс">Bundled with Yandex Plus subscription</div>
+        <div class="gfeat" data-en="AI-powered recommendations via Yandex ML" data-ru="ИИ-рекомендации на основе Яндекс ML">AI-powered recommendations via Yandex ML</div>
+        <div class="gfeat" data-en="4K HDR, Dolby Atmos support" data-ru="Поддержка 4K HDR, Dolby Atmos">4K HDR, Dolby Atmos support</div>
+      </div>
+    </div>
+    <div class="gcard o">
+      <div class="glogo">Okko</div>
+      <div class="gparent" data-en="Sber Ecosystem" data-ru="Экосистема Сбер">Sber Ecosystem</div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Market Share" data-ru="Доля рынка">Market Share</div><div class="gbar"><div class="gfill" data-t="24"></div></div><div class="gstat-val">~24%</div></div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Sber Integration" data-ru="Интеграция Сбер">Sber Integration</div><div class="gbar"><div class="gfill" data-t="90"></div></div><div class="gstat-val" data-en="Deep banking tie-in" data-ru="Банковская интеграция">Deep banking tie-in</div></div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Premium Originals" data-ru="Премиум-оригиналы">Premium Originals</div><div class="gbar"><div class="gfill" data-t="55"></div></div><div class="gstat-val" data-en="Mid-tier output" data-ru="Средний темп">Mid-tier output</div></div>
+      <div class="gfeatures">
+        <div class="gfeat" data-en="Bundled with SberPrime loyalty program" data-ru="В связке с программой лояльности СберПрайм">Bundled with SberPrime loyalty program</div>
+        <div class="gfeat" data-en="SmartTV integration across 20M+ devices" data-ru="Интеграция со SmartTV на 20+ млн устройств">SmartTV integration across 20M+ devices</div>
+        <div class="gfeat" data-en="Licensed Hollywood library" data-ru="Лицензионная голливудская библиотека">Licensed Hollywood library</div>
+      </div>
+    </div>
+    <div class="gcard m">
+      <div class="glogo">KION</div>
+      <div class="gparent" data-en="MTS Digital" data-ru="МТС Диджитал">MTS Digital</div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Market Share" data-ru="Доля рынка">Market Share</div><div class="gbar"><div class="gfill" data-t="18"></div></div><div class="gstat-val">~18%</div></div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Telecom Bundle" data-ru="Телеком-пакет">Telecom Bundle</div><div class="gbar"><div class="gfill" data-t="95"></div></div><div class="gstat-val" data-en="Carrier-native" data-ru="Встроен в тариф">Carrier-native</div></div>
+      <div class="gstat"><div class="gstat-lbl" data-en="Prestige Originals" data-ru="Престижные оригиналы">Prestige Originals</div><div class="gbar"><div class="gfill" data-t="80"></div></div><div class="gstat-val" data-en="Award-winning" data-ru="Призёры фестивалей">Award-winning</div></div>
+      <div class="gfeatures">
+        <div class="gfeat" data-en="Bundled with MTS mobile plans (80M+ subscribers)" data-ru="В тарифах МТС (80+ млн абонентов)">Bundled with MTS mobile plans (80M+ subscribers)</div>
+        <div class="gfeat" data-en="Industry-leading prestige original content" data-ru="Ведущий оригинальный контент отрасли">Industry-leading prestige original content</div>
+        <div class="gfeat" data-en="No-ads tier with 4K streaming" data-ru="Тариф без рекламы с 4K-стримингом">No-ads tier with 4K streaming</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MARKET SHARE DONUT ── -->
+  <div class="sec-inner" style="margin-top:40px;">
+    <style>
+    .donut-wrap{background:var(--panel);border:1px solid var(--gborder);padding:40px;display:grid;grid-template-columns:220px 1fr;gap:48px;align-items:center;}
+    .donut-legend{display:flex;flex-direction:column;gap:20px;}
+    .donut-leg-item{display:flex;align-items:center;gap:14px;cursor:pointer;text-decoration:none;transition:opacity .2s;}
+    .donut-leg-item:hover{opacity:.75;}
+    .donut-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .donut-leg-name{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;}
+    .donut-leg-pct{font-family:'Space Mono',monospace;font-size:11px;color:var(--t2);margin-left:auto;}
+    .donut-leg-sub{font-family:'Space Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:.08em;}
+    .donut-title{font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;margin-bottom:20px;}
+    .donut-center-label{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;fill:var(--t2);}
+    @media(max-width:700px){.donut-wrap{grid-template-columns:1fr;}}
+    .donut-arc{transition:opacity .3s,transform .3s;}
+    .donut-arc:hover{opacity:.85;}
+    </style>
+    <div class="donut-wrap reveal">
+      <div>
+        <div class="donut-title" data-en="OTT Market Share 2023" data-ru="Доля OTT-рынка 2023">OTT Market Share 2023</div>
+        <svg id="donut-svg" viewBox="0 0 200 200" width="200" height="200" style="display:block;margin:0 auto;overflow:visible;">
+          <!-- donut segments drawn by JS -->
+        </svg>
+      </div>
+      <div class="donut-legend">
+        <a class="donut-leg-item" href="https://kinopoisk.ru" target="_blank" rel="noopener">
+          <div class="donut-leg-dot" style="background:var(--blue);box-shadow:0 0 8px rgba(0,212,255,.5);"></div>
+          <div><div class="donut-leg-name" style="color:var(--blue);">Kinopoisk</div><div class="donut-leg-sub">Yandex</div></div>
+          <div class="donut-leg-pct">38%</div>
+        </a>
+        <a class="donut-leg-item" href="https://okko.tv" target="_blank" rel="noopener">
+          <div class="donut-leg-dot" style="background:var(--green);box-shadow:0 0 8px rgba(0,255,136,.4);"></div>
+          <div><div class="donut-leg-name" style="color:var(--green);">Okko</div><div class="donut-leg-sub">Sber</div></div>
+          <div class="donut-leg-pct">24%</div>
+        </a>
+        <a class="donut-leg-item" href="https://kion.ru" target="_blank" rel="noopener">
+          <div class="donut-leg-dot" style="background:var(--red);box-shadow:0 0 8px rgba(255,45,85,.4);"></div>
+          <div><div class="donut-leg-name" style="color:var(--red);">KION</div><div class="donut-leg-sub">MTS</div></div>
+          <div class="donut-leg-pct">18%</div>
+        </a>
+        <a class="donut-leg-item" href="https://ivi.ru" target="_blank" rel="noopener">
+          <div class="donut-leg-dot" style="background:#AA88FF;box-shadow:0 0 8px rgba(170,136,255,.3);"></div>
+          <div><div class="donut-leg-name" style="color:#AA88FF;">ivi</div><div class="donut-leg-sub" data-en="Independent" data-ru="Независимый">Independent</div></div>
+          <div class="donut-leg-pct">12%</div>
+        </a>
+        <div class="donut-leg-item" style="cursor:default;">
+          <div class="donut-leg-dot" style="background:var(--t3);"></div>
+          <div><div class="donut-leg-name" style="color:var(--t3);" data-en="Other" data-ru="Другие">Other</div><div class="donut-leg-sub" data-en="Premier, Start…" data-ru="Премьер, Старт…">Premier, Start…</div></div>
+          <div class="donut-leg-pct" style="color:var(--t3);">8%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="garden-media sec-inner" style="margin-top:2px;">
+    <div class="gmedia-item">
+      <div class="era-yt-label" data-en="Russian OTT Market Overview" data-ru="Обзор российского OTT-рынка">Russian OTT Market Overview</div>
+      <iframe style="width:100%;height:200px;border:none;display:block;margin-top:0;" src="https://www.youtube.com/embed/zSWdZVtXT7E?mute=1&rel=0&modestbranding=1" title="Russian streaming market" allowfullscreen loading="lazy"></iframe>
+      <div class="gmedia-title" style="margin-top:14px;" data-en="The streaming wars: Russia's OTT battleground" data-ru="Стриминговые войны: российский OTT-рынок">The streaming wars: Russia's OTT battleground</div>
+      <div class="gmedia-desc" data-en="How Kinopoisk, Okko, KION and ivi compete for Russia's 50M+ streaming audience." data-ru="Как Кинопоиск, Окко, KION и ivi конкурируют за 50+ млн зрителей.">How Kinopoisk, Okko, KION and ivi compete for Russia's 50M+ streaming audience.</div>
+    </div>
+    <div class="gmedia-item">
+      <img class="gmedia-thumb" src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=600&q=75&auto=format&fit=crop" alt="Streaming platform" loading="lazy">
+      <div class="gmedia-title" data-en="Smart TV penetration: 65%+ of Russian households" data-ru="Проникновение Smart TV: 65%+ российских домохозяйств">Smart TV penetration: 65%+ of Russian households</div>
+      <div class="gmedia-desc" data-en="By 2023, two-thirds of Russian TV homes can access streaming platforms directly without set-top boxes." data-ru="К 2023 году две трети российских домохозяйств могут напрямую получить доступ к стриминговым платформам без приставок.">By 2023, two-thirds of Russian TV homes can access streaming platforms directly without set-top boxes.</div>
+      <a class="stat-pill" href="https://www.statista.com/statistics/797307/russia-smart-tv-household-penetration/" target="_blank" rel="noopener" style="margin-top:12px;" data-en="↗ Statista Source" data-ru="↗ Источник Statista">↗ Statista Source</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DVB-T2 ═══════════════ -->
+<div id="dataviz">
+  <div class="sec-inner">
+    <p class="sec-label reveal" data-en="// 04 — Late vs. Advanced" data-ru="// 04 — Отстающий vs. Передовой">// 04 — Late vs. Advanced</p>
+    <h2 class="sec-title reveal" data-en="The Paradox of Russian Digital TV" data-ru="Парадокс российского цифрового ТВ">The Paradox of Russian Digital TV</h2>
+    <p class="sec-body reveal rd1" data-en="Russia completed its digital transition in 2019 — years after Western Europe. Yet the standard it chose, DVB-T2, was more advanced than what most early adopters deployed. Late to finish, but built for the future." data-ru="Россия завершила цифровой переход в 2019 году — на годы позже Западной Европы. Однако выбранный стандарт DVB-T2 оказался более передовым, чем у большинства ранних последователей. Запоздалое завершение, но с заделом на будущее.">Russia completed its digital transition in 2019 — years after Western Europe. Yet the standard it chose, DVB-T2, was more advanced than what most early adopters deployed. Late to finish, but built for the future.</p>
+    <div class="pills-row reveal rd1">
+      <a class="stat-pill" href="https://www.dvb.org/standards/dvb-t2" target="_blank" rel="noopener">↗ DVB-T2 Standard</a>
+      <a class="stat-pill red" href="https://en.wikipedia.org/wiki/Digital_television_transition_in_Russia" target="_blank" rel="noopener">↗ Russia's Transition</a>
+      <a class="stat-pill green" href="https://en.wikipedia.org/wiki/Digital_Video_Broadcasting" target="_blank" rel="noopener">↗ DVB Overview</a>
+    </div>
+    <div class="comp-grid reveal rd2">
+      <div class="comp-card late">
+        <span class="comp-tag" data-en="Late Completion" data-ru="Позднее завершение">Late Completion</span>
+        <div class="big-n">2019</div>
+        <h3 style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px;" data-en="Transition Timeline" data-ru="Сроки перехода">Transition Timeline</h3>
+        <p style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:28px;" data-en="Germany completed switchover in 2008. UK in 2012. Russia crossed the finish line in 2019 — a full decade behind early adopters, hampered by vast geography and complex federal funding." data-ru="Германия завершила переход в 2008 году. Великобритания — в 2012-м. Россия пересекла финишную черту в 2019 году — на целое десятилетие позже первопроходцев.">Germany completed switchover in 2008. UK in 2012. Russia crossed the finish line in 2019 — a full decade behind early adopters, hampered by vast geography and complex federal funding.</p>
+        <div class="mrow"><div class="mlbl">vs Germany</div><div class="mbar"><div class="mfill" style="width:0%" data-w="85"></div></div><div class="mval">–11yr</div></div>
+        <div class="mrow"><div class="mlbl">vs UK</div><div class="mbar"><div class="mfill" style="width:0%" data-w="70"></div></div><div class="mval">–7yr</div></div>
+        <div class="mrow"><div class="mlbl">vs France</div><div class="mbar"><div class="mfill" style="width:0%" data-w="58"></div></div><div class="mval">–6yr</div></div>
+        <!-- Switchover race visual -->
+        <div style="margin-top:28px;border:1px solid var(--gborder);overflow:hidden;">
+          <div style="padding:10px 14px;background:rgba(255,45,85,.06);border-bottom:1px solid var(--gborder);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--red);text-transform:uppercase;" data-en="Switchover Year by Country" data-ru="Год перехода по странам">Switchover Year by Country</div>
+          <div style="padding:16px 14px;display:flex;flex-direction:column;gap:10px;" id="race-chart">
+            <!-- drawn by JS -->
+          </div>
+        </div>
+      </div>
+      <div class="comp-card adv">
+        <span class="comp-tag" data-en="Advanced Standard" data-ru="Передовой стандарт">Advanced Standard</span>
+        <div class="big-n">T2</div>
+        <h3 style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px;" data-en="DVB-T2 Capability" data-ru="Возможности DVB-T2">DVB-T2 Capability</h3>
+        <p style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:28px;" data-en="Russia skipped DVB-T entirely and deployed DVB-T2 — the second-generation standard offering 50% more spectrum efficiency, enabling 20 free-to-air channels in HD across two multiplexes." data-ru="Россия полностью пропустила DVB-T и перешла на DVB-T2 — стандарт второго поколения с эффективностью спектра на 50% выше, что позволяет передавать 20 бесплатных HD-каналов в двух мультиплексах.">Russia skipped DVB-T entirely and deployed DVB-T2 — the second-generation standard offering 50% more spectrum efficiency, enabling 20 free-to-air channels in HD across two multiplexes.</p>
+        <div class="mrow"><div class="mlbl" data-en="Spectrum eff." data-ru="Эффект. спектра">Spectrum eff.</div><div class="mbar"><div class="mfill" style="width:0%" data-w="90"></div></div><div class="mval">+50%</div></div>
+        <div class="mrow"><div class="mlbl" data-en="HD channels" data-ru="HD каналы">HD channels</div><div class="mbar"><div class="mfill" style="width:0%" data-w="100"></div></div><div class="mval">20</div></div>
+        <div class="mrow"><div class="mlbl" data-en="Coverage" data-ru="Охват">Coverage</div><div class="mbar"><div class="mfill" style="width:0%" data-w="98"></div></div><div class="mval">98%</div></div>
+        <!-- Animated signal spectrum -->
+        <div style="margin-top:28px;border:1px solid var(--gborder);overflow:hidden;">
+          <div style="padding:10px 14px;background:rgba(0,212,255,.05);border-bottom:1px solid var(--gborder);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;color:var(--blue);text-transform:uppercase;" data-en="DVB-T2 Signal Spectrum — Live Simulation" data-ru="Спектр сигнала DVB-T2 — живая симуляция">DVB-T2 Signal Spectrum — Live Simulation</div>
+          <canvas id="spectrum-canvas" width="380" height="80" style="display:block;width:100%;"></canvas>
+        </div>
+      </div>
+      <!-- YouTube explainer -->
+      <div class="dvb-video">
+        <div class="dvb-video-header">
+          <div class="dvb-video-title" data-en="DVB-T2 Explained" data-ru="DVB-T2: объяснение">DVB-T2 Explained</div>
+          <div class="dvb-video-tag" data-en="▶ Technical Explainer" data-ru="▶ Технический разбор">▶ Technical Explainer</div>
+        </div>
+        <iframe src="https://www.youtube.com/embed/dRbxuLuWGi8?mute=1&rel=0&modestbranding=1" title="DVB-T2 Explained" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MULTIPLEX ═══════════════ -->
+<div id="multiplex">
+  <div class="sec-inner">
+    <p class="sec-label reveal" data-en="// 05 — The Multiplex Slider" data-ru="// 05 — Мультиплекс">// 05 — Мультиплекс Слайдер</p>
+    <h2 class="sec-title reveal" data-en="Tune In: Eras of Russian TV" data-ru="Настройтесь: Эпохи российского ТВ">Tune In: Eras of Russian TV</h2>
+    <p class="sec-body reveal rd1" data-en="Navigate five technological and cultural epochs — from Soviet monolith to algorithm-curated stream." data-ru="Путешествие по пяти технологическим и культурным эпохам — от советского монолита до алгоритмического стриминга.">Navigate five technological and cultural epochs — from Soviet monolith to algorithm-curated stream.</p>
+
+    <div class="era-track" role="tablist">
+      <button class="era-tab active" onclick="switchEra('soviet',this)" data-en="Soviet State" data-ru="СССР">Soviet State</button>
+      <button class="era-tab" onclick="switchEra('nineties',this)" data-en="90s Chaos" data-ru="Хаос 90-х">90s Chaos</button>
+      <button class="era-tab" onclick="switchEra('twothousands',this)" data-en="2000s Reform" data-ru="2000-е Реформы">2000s Reform</button>
+      <button class="era-tab" onclick="switchEra('dvb',this)" data-en="DVB-T2 Digital" data-ru="ЦТВ DVB-T2">DVB-T2 Digital</button>
+      <button class="era-tab" onclick="switchEra('stream',this)" data-en="Streaming Era" data-ru="Стриминг">Streaming Era</button>
+    </div>
+
+    <!-- SOVIET -->
+    <div class="era-content active" id="era-soviet">
+      <div>
+        <div class="era-screen">
+          <div class="era-screen-inner soviet">
+            <div style="color:#ccc;font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.3em;text-shadow:0 0 8px rgba(255,255,255,.4);">ПРОГРАММА ПЕРЕДАЧ</div>
+            <div style="color:#777;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;margin-top:8px;">ЦЕНТРАЛЬНОЕ ТЕЛЕВИДЕНИЕ</div>
+            <div style="width:55%;height:1px;background:rgba(255,255,255,.15);margin:14px 0;"></div>
+            <div style="color:#555;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.15em;">ВРЕМЯ — 21:00</div>
+          </div>
+          <div class="era-screen-scan"></div>
+        </div>
+        <div class="era-yt" style="margin-top:12px;">
+          <div class="era-yt-label" data-en="Vremya News Broadcast Archive" data-ru="Архив программы «Время»">Vremya News Broadcast Archive</div>
+          <iframe src="https://www.youtube.com/embed/8T7lXQluCFQ?mute=1&rel=0&modestbranding=1" title="Soviet TV Vremya" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+      <div>
+        <h3 class="era-h" data-en="Soviet State Broadcasting" data-ru="Советское государственное телевидение">Soviet State Broadcasting</h3>
+        <p class="era-p" data-en="A monolithic two-channel system. Central Television broadcast identical content across 11 time zones — the same newscast, aired at different clock times, but always the same editorial signal from Moscow." data-ru="Монолитная двухканальная система. Центральное Телевидение транслировало одинаковый контент по всем 11 часовым поясам — одни и те же новости, в разное местное время, но всегда с одним сигналом из Москвы.">A monolithic two-channel system. Central Television broadcast identical content across 11 time zones — the same newscast, aired at different clock times, but always the same editorial signal from Moscow.</p>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Vremya (Time) — flagship evening newscast, watched by 150M+ citizens nightly" data-ru="«Время» — главный вечерний выпуск новостей, который смотрели 150+ млн зрителей ежедневно">Vremya (Time) — flagship evening newscast, watched by 150M+ citizens nightly</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="2 national channels, 0 commercial advertising, 100% state editorial control" data-ru="2 национальных канала, 0 коммерческой рекламы, 100% государственный редакционный контроль">2 national channels, 0 commercial advertising, 100% state editorial control</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="SECAM color system — the French standard, chosen as a political signal away from Western PAL" data-ru="Цветная система SECAM — французский стандарт, выбранный как политический жест против западного PAL">SECAM color system — the French standard, chosen as a political signal away from Western PAL</div></div>
+        <a class="stat-pill" href="https://en.wikipedia.org/wiki/Television_in_the_Soviet_Union" target="_blank" rel="noopener" style="margin-top:16px;" data-en="↗ Soviet TV Wikipedia" data-ru="↗ Советское ТВ Wikipedia">↗ Soviet TV Wikipedia</a>
+      </div>
+    </div>
+
+    <!-- 90s -->
+    <div class="era-content" id="era-nineties">
+      <div>
+        <div class="era-screen">
+          <div class="era-screen-inner nineties">
+            <div style="color:#FF4444;font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;text-shadow:0 0 20px rgba(255,68,68,.6);">НТВ</div>
+            <div style="color:#666;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.15em;margin-top:8px;">ЧАСТНОЕ ТЕЛЕВИДЕНИЕ — 1993</div>
+            <div style="color:#444;font-family:'Space Mono',monospace;font-size:8px;margin-top:18px;letter-spacing:.08em;">ПЕРВЫЙ · ОРТ · НТВ · ТВ-6 · СТС</div>
+          </div>
+          <div class="era-screen-scan"></div>
+        </div>
+        <div class="era-yt" style="margin-top:12px;">
+          <div class="era-yt-label" data-en="NTV — Russia's First Private Channel (1993)" data-ru="НТВ — первый частный канал России (1993)">NTV — Russia's First Private Channel (1993)</div>
+          <iframe src="https://www.youtube.com/embed/RJoZZWrCWDE?mute=1&rel=0&modestbranding=1" title="NTV 90s Russia" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+      <div>
+        <h3 class="era-h" data-en="The Wild 90s — Oligarch TV" data-ru="Дикие 90-е — Олигархическое ТВ">The Wild 90s — Oligarch TV</h3>
+        <p class="era-p" data-en="The Soviet broadcast system shattered overnight. By 1993, NTV — Russia's first private channel — was on air, backed by Vladimir Gusinsky's Media-Most. Political satire, investigative journalism, and raw commercial television flooded Russian screens for the first time." data-ru="Советская вещательная система рухнула мгновенно. К 1993 году НТВ — первый частный канал России — вышел в эфир при поддержке Медиа-Мост Владимира Гусинского.">The Soviet broadcast system shattered overnight. By 1993, NTV — Russia's first private channel — was on air, backed by Vladimir Gusinsky's Media-Most. Political satire, investigative journalism, and raw commercial television flooded Russian screens for the first time.</p>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="NTV's Kukly (Puppets) satirized Yeltsin and Chubais — unprecedented on Russian screens" data-ru="«Куклы» НТВ высмеивали Ельцина и Чубайса — беспрецедентно для российского телевидения">NTV's Kukly (Puppets) satirized Yeltsin and Chubais — unprecedented on Russian screens</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="50+ regional broadcasters emerge; advertising market grows from $0 to $1B+ in 7 years" data-ru="Появляется 50+ региональных вещателей; рекламный рынок вырастает с 0 до 1+ млрд долларов за 7 лет">50+ regional broadcasters emerge; advertising market grows from $0 to $1B+ in 7 years</div></div>
+        <a class="stat-pill" href="https://en.wikipedia.org/wiki/NTV_(Russia)" target="_blank" rel="noopener" style="margin-top:16px;" data-en="↗ NTV History" data-ru="↗ История НТВ">↗ NTV History</a>
+      </div>
+    </div>
+
+    <!-- 2000s -->
+    <div class="era-content" id="era-twothousands">
+      <div>
+        <div class="era-screen">
+          <div class="era-screen-inner twothousands">
+            <div style="color:#00AAFF;font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;letter-spacing:.12em;">ПЕРВЫЙ КАНАЛ</div>
+            <div style="color:#444;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.15em;margin-top:8px;">STATE RE-CONSOLIDATION</div>
+            <div style="width:45%;height:1px;background:linear-gradient(90deg,#00AAFF,transparent);margin:14px auto;"></div>
+            <div style="color:#333;font-family:'Space Mono',monospace;font-size:7px;letter-spacing:.08em;">РОССИЯ · НТВ → ГАЗПРОМ-МЕДИА</div>
+          </div>
+          <div class="era-screen-scan"></div>
+        </div>
+        <div class="era-yt" style="margin-top:12px;">
+          <div class="era-yt-label" data-en="Pervyi Kanal — State TV Consolidation 2000s" data-ru="Первый канал — Государственная консолидация 2000-х">Pervyi Kanal — State TV Consolidation 2000s</div>
+          <iframe src="https://www.youtube.com/embed/GNQOhB1uyVE?mute=1&rel=0&modestbranding=1" title="Russia TV 2000s" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+      <div>
+        <h3 class="era-h" data-en="2000s — Consolidation Under State" data-ru="2000-е — Консолидация под государством">2000s — Consolidation Under State</h3>
+        <p class="era-p" data-en="The Kremlin systematically reacquired control of major channels. NTV passed to Gazprom-Media in 2001. ORT became Pervyi Kanal. The chaotic freedom of the 90s gave way to managed pluralism — competition within a state-sanctioned framework." data-ru="Кремль последовательно восстановил контроль над крупными каналами. НТВ перешёл к Газпром-Медиа в 2001 году. ОРТ стало Первым каналом. Хаотичная свобода 90-х сменилась управляемым плюрализмом.">The Kremlin systematically reacquired control of major channels. NTV passed to Gazprom-Media in 2001. ORT became Pervyi Kanal. The chaotic freedom of the 90s gave way to managed pluralism — competition within a state-sanctioned framework.</p>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Gusinsky and Berezovsky forced into exile; their channels revert to state-aligned ownership" data-ru="Гусинский и Березовский вынуждены эмигрировать; их каналы переходят под государственно ориентированный контроль">Gusinsky and Berezovsky forced into exile; their channels revert to state-aligned ownership</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Reality TV boom: Dom-2 launches in 2004, airs continuously for 17+ years" data-ru="Бум реалити-шоу: «Дом-2» стартует в 2004 году и выходит в эфир непрерывно более 17 лет">Reality TV boom: Dom-2 launches in 2004, airs continuously for 17+ years</div></div>
+        <a class="stat-pill" href="https://en.wikipedia.org/wiki/Perviy_Kanal" target="_blank" rel="noopener" style="margin-top:16px;" data-en="↗ Perviy Kanal History" data-ru="↗ История Первого канала">↗ Perviy Kanal History</a>
+      </div>
+    </div>
+
+    <!-- DVB -->
+    <div class="era-content" id="era-dvb">
+      <div>
+        <div class="era-screen">
+          <div class="era-screen-inner dvb">
+            <div style="color:var(--blue);font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;letter-spacing:.18em;">DVB-T2</div>
+            <div style="color:#004466;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.2em;margin-top:4px;">MULTIPLEX 1 + 2</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;width:82%;margin-top:14px;">
+              ${[...Array(20)].map((_,i)=>`<div style="height:13px;background:rgba(0,212,255,${.15+(i%3)*.1});border:1px solid rgba(0,212,255,.2);font-size:6px;display:flex;align-items:center;justify-content:center;color:rgba(0,212,255,.6);font-family:'Space Mono',monospace;">C${i+1}</div>`).join('')}
+            </div>
+          </div>
+          <div class="era-screen-scan"></div>
+        </div>
+        <div class="era-yt" style="margin-top:12px;">
+          <div class="era-yt-label" data-en="Russia DVB-T2 Rollout Coverage" data-ru="Распространение DVB-T2 в России">Russia DVB-T2 Rollout Coverage</div>
+          <iframe src="https://www.youtube.com/embed/PYbNOhwQCjg?mute=1&rel=0&modestbranding=1" title="DVB-T2 Russia" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+      <div>
+        <h3 class="era-h" data-en="DVB-T2 Digital Switchover (2009–2019)" data-ru="Цифровой переход DVB-T2 (2009–2019)">DVB-T2 Digital Switchover (2009–2019)</h3>
+        <p class="era-p" data-en="The Federal Target Program digitized the entire country in a decade. Two free-to-air multiplexes — each carrying 10 channels — were broadcast from 5,000+ transmitters, reaching 98% of Russia's population." data-ru="Федеральная целевая программа оцифровала всю страну за десять лет. Два бесплатных мультиплекса — по 10 каналов каждый — транслировались с 5000+ передатчиков, охватив 98% населения России.">The Federal Target Program digitized the entire country in a decade. Two free-to-air multiplexes — each carrying 10 channels — were broadcast from 5,000+ transmitters, reaching 98% of Russia's population.</p>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Multiplex 1: Pervyi Kanal, Rossiya 1, Rossiya-K, NTV + 6 others — all free, all HD" data-ru="Мультиплекс 1: Первый канал, Россия 1, Россия-К, НТВ + 6 других — всё бесплатно, всё в HD">Multiplex 1: Pervyi Kanal, Rossiya 1, Rossiya-K, NTV + 6 others — all free, all HD</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="120M+ DVB-T2 receivers distributed; set-top boxes provided free to vulnerable households" data-ru="Распределено 120+ млн приёмников DVB-T2; приставки предоставлялись бесплатно льготным категориям">120M+ DVB-T2 receivers distributed; set-top boxes provided free to vulnerable households</div></div>
+        <a class="stat-pill" href="https://en.wikipedia.org/wiki/Digital_television_transition_in_Russia" target="_blank" rel="noopener" style="margin-top:16px;" data-en="↗ Russia's Digital Transition" data-ru="↗ Цифровой переход России">↗ Russia's Digital Transition</a>
+      </div>
+    </div>
+
+    <!-- STREAM -->
+    <div class="era-content" id="era-stream">
+      <div>
+        <div class="era-screen">
+          <div class="era-screen-inner stream">
+            <div style="background:linear-gradient(135deg,rgba(0,212,255,.14),rgba(255,45,85,.1));border:1px solid rgba(0,212,255,.2);padding:8px 16px;border-radius:2px;">
+              <div style="color:var(--blue);font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;">KINOPOISK ORIGINALS</div>
+            </div>
+            <div style="color:#444;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.08em;margin-top:12px;">OKKO · KION · IVI · START · PREMIER</div>
+            <div style="color:#2a2a2a;font-family:'Space Mono',monospace;font-size:7px;margin-top:6px;">OTT MARKET: +40%/yr</div>
+          </div>
+          <div class="era-screen-scan"></div>
+        </div>
+        <div class="era-yt" style="margin-top:12px;">
+          <div class="era-yt-label" data-en="Russia's Streaming Revolution — 2019 to Now" data-ru="Стриминговая революция России — 2019 по сей день">Russia's Streaming Revolution — 2019 to Now</div>
+          <iframe src="https://www.youtube.com/embed/zSWdZVtXT7E?mute=1&rel=0&modestbranding=1" title="Russia streaming" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+      <div>
+        <h3 class="era-h" data-en="The Streaming Era (2019–Present)" data-ru="Стриминговая эпоха (2019–настоящее)">The Streaming Era (2019–Present)</h3>
+        <p class="era-p" data-en="The analog switch-off paradoxically accelerated Russia's streaming revolution. With viewers already updating hardware, OTT platforms surged. Kinopoisk HD, Okko, KION, and ivi emerged as dominant players, investing heavily in Russian-language originals." data-ru="Отключение аналогового сигнала парадоксально ускорило стриминговую революцию в России. Пока зрители обновляли оборудование, OTT-платформы стремительно выросли.">The analog switch-off paradoxically accelerated Russia's streaming revolution. With viewers already updating hardware, OTT platforms surged. Kinopoisk HD, Okko, KION, and ivi emerged as dominant players, investing heavily in Russian-language originals.</p>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Russian OTT market reached $1.5B+ by 2022, growing 40–60% annually" data-ru="Российский OTT-рынок достиг 1,5+ млрд долларов к 2022 году с ростом 40–60% в год">Russian OTT market reached $1.5B+ by 2022, growing 40–60% annually</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Post-2022 exit of Netflix accelerated domestic platform investment in originals" data-ru="Уход Netflix после 2022 года ускорил инвестиции отечественных платформ в оригинальный контент">Post-2022 exit of Netflix accelerated domestic platform investment in originals</div></div>
+        <div class="era-fact-item"><div class="era-dot"></div><div class="era-ft" data-en="Smart TV penetration at 65%+ enables direct platform access without set-top boxes" data-ru="Проникновение Smart TV на уровне 65%+ обеспечивает прямой доступ к платформам без приставок">Smart TV penetration at 65%+ enables direct platform access without set-top boxes</div></div>
+        <a class="stat-pill" href="https://www.statista.com/topics/4109/television-in-russia/" target="_blank" rel="noopener" style="margin-top:16px;" data-en="↗ Russia OTT Data" data-ru="↗ Данные OTT России">↗ Russia OTT Data</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CONVERGENCE ═══════════════ -->
+<div id="convergence">
+  <div class="sec-inner">
+    <p class="sec-label reveal" data-en="// 06 — Convergence" data-ru="// 06 — Конвергенция">// 06 — Convergence</p>
+    <h2 class="sec-title reveal" data-en="From Channel to Platform" data-ru="От канала к платформе">From Channel to Platform</h2>
+    <p class="sec-body reveal rd1" data-en="Legacy broadcast channels survive the streaming era through deep integration — each embedding itself within dominant OTT ecosystems, transforming from destination to content supplier. Hover to unfold." data-ru="Традиционные вещательные каналы выживают в эпоху стриминга через глубокую интеграцию — встраиваясь в ведущие OTT-экосистемы и превращаясь из пункта назначения в поставщика контента. Наведите курсор, чтобы развернуть.">Legacy broadcast channels survive the streaming era through deep integration — each embedding itself within dominant OTT ecosystems, transforming from destination to content supplier. Hover to unfold.</p>
+    <div class="conv-grid">
+      <div class="conv-card reveal">
+        <div class="conv-front">
+          <div><div class="conv-ch">Первый Канал</div><div class="conv-yr" data-en="Est. 1938 · State Channel" data-ru="Осн. 1938 · Государственный">Est. 1938 · State Channel</div></div>
+          <p class="conv-tg" data-en="Russia's most-watched channel with 98% reach — navigating the fragmentation of attention with a multi-platform strategy." data-ru="Самый популярный канал России с охватом 98% — разрабатывает мультиплатформенную стратегию в условиях фрагментации аудитории.">Russia's most-watched channel with 98% reach — navigating the fragmentation of attention with a multi-platform strategy.</p>
+          <div class="conv-arr">↗</div>
+        </div>
+        <div class="conv-back">
+          <div class="conv-div"></div>
+          <div class="conv-ititle" data-en="→ Digital Integration" data-ru="→ Цифровая интеграция">→ Digital Integration</div>
+          <ul class="conv-list">
+            <li data-en="Full archive on Perviy.ru OTT platform" data-ru="Полный архив на OTT-платформе Perviy.ru">Full archive on Perviy.ru OTT platform</li>
+            <li data-en="Content licensed to Kinopoisk HD catalog" data-ru="Контент лицензирован для каталога Kinopoisk HD">Content licensed to Kinopoisk HD catalog</li>
+            <li data-en="Live stream embedded in all major Smart TV apps" data-ru="Прямая трансляция встроена во все ведущие Smart TV приложения">Live stream embedded in all major Smart TV apps</li>
+            <li data-en="Catch-up TV via DVB-T2 HbbTV interactive layer" data-ru="Отложенный просмотр через интерактивный слой DVB-T2 HbbTV">Catch-up TV via DVB-T2 HbbTV interactive layer</li>
+          </ul>
+          <div class="conv-badge" data-en="Channel One Digital" data-ru="Первый Канал Цифровой">Channel One Digital</div>
+        </div>
+      </div>
+      <div class="conv-card reveal rd1">
+        <div class="conv-front">
+          <div><div class="conv-ch">НТВ</div><div class="conv-yr" data-en="Est. 1993 · Gazprom-Media" data-ru="Осн. 1993 · Газпром-Медиа">Est. 1993 · Gazprom-Media</div></div>
+          <p class="conv-tg" data-en="Born in the 90s as Russia's answer to commercial journalism. Now a crime-drama powerhouse within Gazprom-Media's streaming arm." data-ru="Рождённый в 90-х как российский ответ на коммерческую журналистику. Теперь — лидер криминальной драмы в стриминговом подразделении Газпром-Медиа.">Born in the 90s as Russia's answer to commercial journalism. Now a crime-drama powerhouse within Gazprom-Media's streaming arm.</p>
+          <div class="conv-arr">↗</div>
+        </div>
+        <div class="conv-back">
+          <div class="conv-div"></div>
+          <div class="conv-ititle" data-en="→ Digital Integration" data-ru="→ Цифровая интеграция">→ Digital Integration</div>
+          <ul class="conv-list">
+            <li data-en="Deep integration with Premier streaming platform" data-ru="Глубокая интеграция со стриминговой платформой Premier">Deep integration with Premier streaming platform</li>
+            <li data-en="NTV crime drama franchises available as SVOD series" data-ru="Криминальные франшизы НТВ доступны как SVOD-сериалы">NTV crime drama franchises available as SVOD series</li>
+            <li data-en="Co-production model with Premier Originals" data-ru="Модель сопроизводства с Premier Originals">Co-production model with Premier Originals</li>
+            <li data-en="Live + VOD across 20M Premier subscribers" data-ru="Прямой эфир + VOD для 20 млн подписчиков Premier">Live + VOD across 20M Premier subscribers</li>
+          </ul>
+          <div class="conv-badge" data-en="Premier · Gazprom-Media" data-ru="Premier · Газпром-Медиа">Premier · Gazprom-Media</div>
+        </div>
+      </div>
+      <div class="conv-card reveal rd2">
+        <div class="conv-front">
+          <div><div class="conv-ch">Россия 1</div><div class="conv-yr" data-en="Est. 1991 · VGTRK State" data-ru="Осн. 1991 · ВГТРК">Est. 1991 · VGTRK State</div></div>
+          <p class="conv-tg" data-en="The state's second flagship. Dominant in news and Soviet-era archive content — its archive is among Russia's most valuable broadcasting assets." data-ru="Второй государственный флагман. Доминирует в новостях и архивном контенте советской эпохи — один из самых ценных вещательных активов России.">The state's second flagship. Dominant in news and Soviet-era archive content — its archive is among Russia's most valuable broadcasting assets.</p>
+          <div class="conv-arr">↗</div>
+        </div>
+        <div class="conv-back">
+          <div class="conv-div"></div>
+          <div class="conv-ititle" data-en="→ Digital Integration" data-ru="→ Цифровая интеграция">→ Digital Integration</div>
+          <ul class="conv-list">
+            <li data-en="VGTRK archive accessible via Russia.tv platform" data-ru="Архив ВГТРК доступен через платформу Russia.tv">VGTRK archive accessible via Russia.tv platform</li>
+            <li data-en="Series catalog licensed across Okko and ivi" data-ru="Каталог сериалов лицензирован для Окко и ivi">Series catalog licensed across Okko and ivi</li>
+            <li data-en="Smart TV app with full live + 30-day catch-up" data-ru="Smart TV приложение с прямым эфиром + 30 дней записей">Smart TV app with full live + 30-day catch-up</li>
+            <li data-en="HbbTV second-screen interactivity on DVB-T2" data-ru="Интерактивность HbbTV на втором экране через DVB-T2">HbbTV second-screen interactivity on DVB-T2</li>
+          </ul>
+          <div class="conv-badge" data-en="Russia.tv · VGTRK" data-ru="Russia.tv · ВГТРК">Russia.tv · VGTRK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MEDIA GALLERY ═══════════════ -->
+<div id="media-gallery">
+  <div class="sec-inner">
+    <p class="sec-label reveal" data-en="// 07 — Media Gallery" data-ru="// 07 — Медиагалерея">// 07 — Media Gallery</p>
+    <h2 class="sec-title reveal" data-en="Signals in Motion" data-ru="Сигналы в движении">Signals in Motion</h2>
+    <p class="sec-body reveal rd1" data-en="Archival footage, explainer videos, and documentary clips that trace Russia's broadcasting journey. Click to play." data-ru="Архивные записи, обучающие видео и документальные фрагменты, отражающие путь российского телевещания. Нажмите для воспроизведения.">Archival footage, explainer videos, and documentary clips that trace Russia's broadcasting journey. Click to play.</p>
+    <div class="gallery-grid reveal rd1">
+      <div class="gal-item featured" onclick="openLightbox('https://www.youtube.com/embed/dRbxuLuWGi8?autoplay=1&rel=0', 'DVB-T2 Technology Deep Dive')">
+        <img class="gal-thumb" src="https://images.unsplash.com/photo-1593784991095-a205069470b6?w=1200&q=80&auto=format&fit=crop" alt="Broadcasting" loading="lazy">
+        <div class="gal-tag" data-en="Featured" data-ru="Главное">Featured</div>
+        <div class="gal-overlay">
+          <div class="gal-overlay-bg"></div>
+          <div class="gal-title" data-en="DVB-T2: The Standard That Made Russia's Digital TV Possible" data-ru="DVB-T2: стандарт, сделавший цифровое ТВ России возможным">DVB-T2: The Standard That Made Russia's Digital TV Possible</div>
+          <div class="gal-desc" data-en="A technical breakdown of why Russia's chosen standard outperforms early European adopters." data-ru="Технический разбор того, почему выбранный Россией стандарт превосходит ранних европейских последователей.">A technical breakdown of why Russia's chosen standard outperforms early European adopters.</div>
+        </div>
+        <div class="play-btn">▶</div>
+      </div>
+      <div class="gal-item" onclick="openLightbox('https://www.youtube.com/embed/PYbNOhwQCjg?autoplay=1&rel=0', 'Russia Analog Switchover 2019')">
+        <img class="gal-thumb" src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=700&q=75&auto=format&fit=crop" alt="Signal tower" loading="lazy">
+        <div class="gal-tag" data-en="Documentary" data-ru="Документальное">Documentary</div>
+        <div class="gal-overlay">
+          <div class="gal-overlay-bg"></div>
+          <div class="gal-title" data-en="The 2019 Switchover" data-ru="Отключение 2019 года">The 2019 Switchover</div>
+          <div class="gal-desc" data-en="Russia ends 60 years of analog broadcast." data-ru="Россия завершает 60 лет аналогового вещания.">Russia ends 60 years of analog broadcast.</div>
+        </div>
+        <div class="play-btn">▶</div>
+      </div>
+      <div class="gal-item" onclick="openLightbox('https://www.youtube.com/embed/zSWdZVtXT7E?autoplay=1&rel=0', 'Russia Streaming Market Analysis')">
+        <img class="gal-thumb" src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=700&q=75&auto=format&fit=crop" alt="Streaming" loading="lazy">
+        <div class="gal-tag" data-en="Market Analysis" data-ru="Анализ рынка">Market Analysis</div>
+        <div class="gal-overlay">
+          <div class="gal-overlay-bg"></div>
+          <div class="gal-title" data-en="The OTT Wars" data-ru="OTT-войны">The OTT Wars</div>
+          <div class="gal-desc" data-en="Kinopoisk vs Okko vs KION: who wins?" data-ru="Кинопоиск против Окко против KION: кто победит?">Kinopoisk vs Okko vs KION: who wins?</div>
+        </div>
+        <div class="play-btn">▶</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <iframe id="lightbox-iframe" src="" allowfullscreen></iframe>
+  <div id="lightbox-title"></div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo" data-en="Signal to Stream" data-ru="Сигнал в стриминг">Signal to Stream</div>
+  <div class="foot-links">
+    <a href="https://www.dvb.org" target="_blank" rel="noopener">DVB.org</a>
+    <a href="https://digital.gov.ru" target="_blank" rel="noopener" data-en="Mintsifry" data-ru="Минцифры">Mintsifry</a>
+    <a href="https://www.statista.com/topics/4109/television-in-russia/" target="_blank" rel="noopener">Statista Russia TV</a>
+    <a href="https://kinopoisk.ru" target="_blank" rel="noopener">Kinopoisk</a>
+    <a href="https://okko.tv" target="_blank" rel="noopener">Okko</a>
+    <a href="https://kion.ru" target="_blank" rel="noopener">KION</a>
+  </div>
+  <p class="foot-copy" data-en="Analytical dispatch — not affiliated with any broadcaster or platform. Images via Unsplash." data-ru="Аналитический материал — не аффилирован ни с одним вещателем или платформой. Изображения: Unsplash.">Analytical dispatch — not affiliated with any broadcaster or platform. Images via Unsplash.</p>
+</footer>
+
+<script>
+// ═══════════ LANGUAGE ═══════════
+let lang = 'en';
+function toggleLang(){
+  lang = lang==='en' ? 'ru' : 'en';
+  document.getElementById('lang-btn').textContent = lang==='en' ? 'RU / EN' : 'EN / RU';
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-en]').forEach(el=>{
+    const key = lang==='ru' ? 'ru' : 'en';
+    if(el.dataset[key]) el.textContent = el.dataset[key];
+  });
+  // Re-run wave status
+  document.getElementById('wave-status').textContent = lang==='ru' ? 'Готово — с Дальнего Востока до Калининграда' : 'Ready — Far East to Kaliningrad';
+}
+
+// ═══════════ MOBILE NAV ═══════════
+function openMobile(){document.getElementById('mobile-menu').classList.add('open');document.body.style.overflow='hidden';}
+function closeMobile(){document.getElementById('mobile-menu').classList.remove('open');document.body.style.overflow='';}
+
+// ═══════════ SCROLL ═══════════
+let raf=false;
+window.addEventListener('scroll',()=>{if(!raf){requestAnimationFrame(onScroll);raf=true;}},{passive:true});
+function onScroll(){
+  raf=false;
+  const st=window.scrollY, dh=document.documentElement.scrollHeight-innerHeight;
+  document.getElementById('sprog').style.width=(st/dh*100)+'%';
+  // Aesthetic fade
+  const t=Math.min(st/(dh*.55),1);
+  document.getElementById('grain-overlay').style.opacity=1-t*.88;
+  // Nav compact
+  document.getElementById('main-nav').classList.toggle('scrolled',st>80);
+  // Reveal
+  document.querySelectorAll('.reveal:not(.vis)').forEach(el=>{
+    if(el.getBoundingClientRect().top<innerHeight-60){
+      el.classList.add('vis');
+      el.querySelectorAll('[data-t]').forEach((b,i)=>setTimeout(()=>b.style.width=b.dataset.t+'%',i*140+100));
+      el.querySelectorAll('[data-w]').forEach((b,i)=>setTimeout(()=>b.style.width=b.dataset.w+'%',i*120+150));
+    }
+  });
+}
+// initial
+setTimeout(()=>{document.querySelectorAll('.reveal').forEach(el=>{if(el.getBoundingClientRect().top<innerHeight-40){el.classList.add('vis');}});},120);
+
+// ═══════════ COUNTERS + RADIAL RINGS ═══════════
+const ringTargets={ring1:11/11,ring2:50/100,ring3:20/20,ring4:2/10};
+const circumference=239;
+function animateRing(id,fraction,delay=400){
+  setTimeout(()=>{
+    const el=document.getElementById(id);
+    if(el) el.style.strokeDashoffset=circumference*(1-Math.min(fraction,1));
+  },delay);
+}
+function counter(id,target,suffix,duration=1400){
+  const el=document.getElementById(id);
+  if(!el)return;
+  let s=0,step=target/60;
+  const t=setInterval(()=>{
+    s+=step;
+    if(s>=target){s=target;clearInterval(t);}
+    el.textContent=Math.floor(s)+suffix;
+  },duration/60);
+}
+setTimeout(()=>{
+  counter('st1',11,'',900);
+  counter('st2',50,'',1100);
+  counter('st3',20,'',900);
+  counter('st4',2,'',1100);
+  // rings fill to proportion of "impressiveness"
+  animateRing('ring1',0.85,500);  // 11 TZ impressive
+  animateRing('ring2',0.72,600);  // 50M
+  animateRing('ring3',1.0,500);   // 20 channels = full
+  animateRing('ring4',0.6,700);   // $2B market
+},400);
+
+// ═══════════ DONUT CHART ═══════════
+(function buildDonut(){
+  const segments=[
+    {pct:38,color:'#00D4FF',label:'Kinopoisk'},
+    {pct:24,color:'#00FF88',label:'Okko'},
+    {pct:18,color:'#FF2D55',label:'KION'},
+    {pct:12,color:'#AA88FF',label:'ivi'},
+    {pct:8,color:'#4A5270',label:'Other'},
+  ];
+  const svg=document.getElementById('donut-svg');
+  if(!svg)return;
+  const cx=100,cy=100,r=70,inner=46;
+  let start=0;
+  // draw segments
+  segments.forEach(s=>{
+    const angle=s.pct/100*360;
+    const startRad=(start-90)*Math.PI/180;
+    const endRad=(start+angle-90)*Math.PI/180;
+    const x1=cx+r*Math.cos(startRad),y1=cy+r*Math.sin(startRad);
+    const x2=cx+r*Math.cos(endRad),y2=cy+r*Math.sin(endRad);
+    const ix1=cx+inner*Math.cos(startRad),iy1=cy+inner*Math.sin(startRad);
+    const ix2=cx+inner*Math.cos(endRad),iy2=cy+inner*Math.sin(endRad);
+    const large=angle>180?1:0;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large} 0 ${ix1},${iy1} Z`);
+    path.setAttribute('fill',s.color);
+    path.setAttribute('opacity','0.85');
+    path.style.transition='opacity .2s,transform .2s';
+    path.style.transformOrigin=`${cx}px ${cy}px`;
+    path.addEventListener('mouseenter',()=>{path.setAttribute('opacity','1');path.style.transform='scale(1.04)';});
+    path.addEventListener('mouseleave',()=>{path.setAttribute('opacity','0.85');path.style.transform='';});
+    // gap between segments
+    start+=angle+0.8;
+    svg.appendChild(path);
+  });
+  // center text
+  const t1=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t1.setAttribute('x',cx);t1.setAttribute('y',cy-6);t1.setAttribute('text-anchor','middle');
+  t1.setAttribute('fill','#F0F4FF');t1.setAttribute('font-family','Unbounded,sans-serif');t1.setAttribute('font-size','16');t1.setAttribute('font-weight','700');
+  t1.textContent='OTT';svg.appendChild(t1);
+  const t2=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t2.setAttribute('x',cx);t2.setAttribute('y',cy+12);t2.setAttribute('text-anchor','middle');
+  t2.setAttribute('fill','#4A5270');t2.setAttribute('font-family','Space Mono,monospace');t2.setAttribute('font-size','8');
+  t2.textContent='MARKET';svg.appendChild(t2);
+})();
+
+// ═══════════ SWITCHOVER RACE CHART ═══════════
+(function buildRace(){
+  const container=document.getElementById('race-chart');
+  if(!container)return;
+  const countries=[
+    {name:'Luxembourg',year:2006,flag:'🇱🇺'},{name:'Netherlands',year:2006,flag:'🇳🇱'},
+    {name:'Germany',year:2008,flag:'🇩🇪'},{name:'Sweden',year:2008,flag:'🇸🇪'},
+    {name:'Finland',year:2010,flag:'🇫🇮'},{name:'UK',year:2012,flag:'🇬🇧'},
+    {name:'France',year:2011,flag:'🇫🇷'},{name:'Spain',year:2010,flag:'🇪🇸'},
+    {name:'Russia',year:2019,flag:'🇷🇺',highlight:true},
+  ];
+  const minY=2006,maxY=2019,range=maxY-minY;
+  countries.forEach(c=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;';
+    const pct=((c.year-minY)/range)*100;
+    const isRu=c.highlight;
+    row.innerHTML=`
+      <span style="font-family:'Space Mono',monospace;font-size:10px;width:22px;text-align:center;">${c.flag}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:9px;color:${isRu?'var(--red)':'var(--t3)'};width:80px;flex-shrink:0;letter-spacing:.04em;">${c.name}</span>
+      <div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;">
+        <div style="height:100%;width:0%;background:${isRu?'var(--red)':'var(--t3)'};border-radius:2px;transition:width 1.4s cubic-bezier(.4,0,.2,1);" data-w="${pct}"></div>
+      </div>
+      <span style="font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;color:${isRu?'var(--red)':'var(--t2)'};width:32px;text-align:right;">${c.year}</span>`;
+    container.appendChild(row);
+  });
+  // Observe to animate
+  const raceObs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.querySelectorAll('[data-w]').forEach((b,i)=>setTimeout(()=>b.style.width=b.dataset.w+'%',i*80+200));
+        raceObs.unobserve(e.target);
+      }
+    });
+  },{threshold:0.3});
+  raceObs.observe(container);
+})();
+
+// ═══════════ SPECTRUM CANVAS ═══════════
+(function buildSpectrum(){
+  const canvas=document.getElementById('spectrum-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const bars=40;
+  let phase=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bw=W/bars-1;
+    for(let i=0;i<bars;i++){
+      const norm=i/bars;
+      // DVB-T2 shaped spectrum: flat-top with sharp edges
+      let amp;
+      if(norm<0.08||norm>0.92) amp=0.05+Math.random()*.08;
+      else amp=0.55+Math.sin(phase+i*.18)*.2+Math.random()*.12;
+      const h=amp*H;
+      const blue=`rgba(0,${Math.floor(140+norm*80)},255,`;
+      ctx.fillStyle=blue+'0.7)';
+      ctx.fillRect(i*(bw+1),H-h,bw,h);
+      // cap glow
+      ctx.fillStyle='rgba(0,212,255,0.9)';
+      ctx.fillRect(i*(bw+1),H-h-2,bw,2);
+    }
+    phase+=0.04;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════════ ISS BUTTON ═══════════
+function pressISS(){
+  const btn=document.getElementById('iss-btn');
+  const on=btn.classList.toggle('pressed');
+  btn.querySelector('.iss-icon').textContent=on?'📺':'🛰️';
+  const txt=btn.querySelector('div:not(.iss-badge):not(.iss-icon)');
+  if(txt){txt.textContent=on?(lang==='ru'?'Сигнал выкл.':'Signal Off'):(lang==='ru'?'Нажать':'Press');}
+  if(on){
+    document.getElementById('grain-overlay').style.opacity='1';
+    setTimeout(()=>document.getElementById('grain-overlay').style.opacity='0.02',400);
+  }
+}
+
+// ═══════════ TIME ZONES ═══════════
+const TZ=[
+  {city:'Petropavlovsk',offset:12},{city:'Vladivostok',offset:10},{city:'Yakutsk',offset:9},
+  {city:'Irkutsk',offset:8},{city:'Krasnoyarsk',offset:7},{city:'Omsk',offset:6},
+  {city:'Yekaterinburg',offset:5},{city:'Samara',offset:4},{city:'Moscow',offset:3},
+  {city:'Kaliningrad',offset:2},{city:'(exclave)',offset:2}
+];
+const tzRu=['Петропавловск','Владивосток','Якутск','Иркутск','Красноярск','Омск','Екатеринбург','Самара','Москва','Калининград','(эксклав)'];
+const tgEl=document.getElementById('tz-grid');
+TZ.forEach((tz,i)=>{
+  const card=document.createElement('div');card.className='tz-card';card.id='tz-'+i;
+  const now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
+  const lt=new Date(utc+tz.offset*3600000);
+  const ts=lt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false});
+  card.innerHTML=`<div class="tz-name">${tz.city}</div><div class="tz-offset">UTC+${tz.offset}</div><div class="tz-time">${ts}</div>`;
+  tgEl.appendChild(card);
+});
+// live tick
+setInterval(()=>{
+  TZ.forEach((tz,i)=>{
+    const c=document.getElementById('tz-'+i);if(!c)return;
+    const now=new Date(),utc=now.getTime()+now.getTimezoneOffset()*60000;
+    const lt=new Date(utc+tz.offset*3600000);
+    const ts=lt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false});
+    const tn=c.querySelector('.tz-time');if(tn)tn.textContent=ts;
+    const cn=c.querySelector('.tz-name');
+    if(cn)cn.textContent=lang==='ru'?tzRu[i]:tz.city;
+  });
+},10000);
+let waving=false;
+function startWave(){
+  if(waving)return;waving=true;
+  const cards=document.querySelectorAll('.tz-card'),st=document.getElementById('wave-status');
+  let i=0;
+  function step(){
+    if(i>=TZ.length){st.textContent=lang==='ru'?'✓ Аналог отключён по всей стране':'✓ Switchover complete — Analog terminated nationwide';waving=false;return;}
+    cards[i].classList.add('active');
+    const city=lang==='ru'?tzRu[i]:TZ[i].city;
+    st.textContent=(lang==='ru'?`Отключение сигнала → ${city} (UTC+${TZ[i].offset})`:`Terminating signal → ${city} (UTC+${TZ[i].offset})`);
+    setTimeout(()=>{cards[i].classList.remove('active');cards[i].classList.add('passed');i++;step();},500);
+  }step();
+}
+function resetWave(){
+  waving=false;
+  document.querySelectorAll('.tz-card').forEach(c=>c.className='tz-card');
+  document.getElementById('wave-status').textContent=lang==='ru'?'Готово — с Дальнего Востока до Калининграда':'Ready — Far East to Kaliningrad';
+}
+
+// ═══════════ ERA SLIDER ═══════════
+function switchEra(era,btn){
+  document.querySelectorAll('.era-content').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.era-tab').forEach(t=>t.classList.remove('active'));
+  const target=document.getElementById('era-'+era);
+  if(target)target.classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════ LIGHTBOX ═══════════
+function openLightbox(src,title){
+  document.getElementById('lightbox-iframe').src=src;
+  document.getElementById('lightbox-title').textContent=title;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeLightbox(){
+  document.getElementById('lightbox-iframe').src='';
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('lightbox').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLightbox();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+
+// ═══════════ INTERSECTION OBSERVER for bars ═══════════
+const barObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.querySelectorAll('[data-t]').forEach((b,i)=>setTimeout(()=>b.style.width=b.dataset.t+'%',i*150+100));
+    }
+  });
+},{threshold:0.25});
+document.querySelectorAll('.gardens-grid,.comp-grid').forEach(g=>barObs.observe(g));
+</script>
+</body>
+</html>
